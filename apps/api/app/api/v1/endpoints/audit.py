@@ -18,20 +18,35 @@ def list_audit_events(
     organization_id: str | None = Query(default=None),
     repository_id: str | None = Query(default=None),
     tool_name: str | None = Query(default=None),
+    page: int | None = Query(default=None, ge=1),
+    page_size: int | None = Query(default=None, ge=1, le=100),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
+    import math
+    from sqlalchemy import func
+
     query = select(ToolExecutionAudit).order_by(ToolExecutionAudit.created_at.desc())
+    count_query = select(func.count(ToolExecutionAudit.id))
     if organization_id:
         query = query.where(ToolExecutionAudit.organization_id == organization_id)
+        count_query = count_query.where(ToolExecutionAudit.organization_id == organization_id)
     if repository_id:
         query = query.where(ToolExecutionAudit.repository_id == repository_id)
+        count_query = count_query.where(ToolExecutionAudit.repository_id == repository_id)
     if tool_name:
         query = query.where(ToolExecutionAudit.tool_name == tool_name)
+        count_query = count_query.where(ToolExecutionAudit.tool_name == tool_name)
 
-    items = list(db.scalars(query.offset(offset).limit(limit)).all())
+    effective_page = page or 1
+    effective_limit = page_size if page_size is not None else limit
+    effective_offset = (effective_page - 1) * effective_limit if page is not None else offset
+
+    total = db.scalar(count_query) or 0
+    total_pages = math.ceil(total / effective_limit) if total > 0 else 1
+    items = list(db.scalars(query.offset(effective_offset).limit(effective_limit)).all())
     return {
         "items": [
             {
@@ -54,7 +69,10 @@ def list_audit_events(
             }
             for a in items
         ],
-        "total": len(items),
+        "total": total,
+        "page": effective_page,
+        "page_size": effective_limit,
+        "total_pages": total_pages,
     }
 
 

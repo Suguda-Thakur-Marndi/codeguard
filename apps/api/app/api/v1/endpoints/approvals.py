@@ -28,11 +28,15 @@ def list_approvals(
     repository_id: str | None = Query(default=None),
     pull_request_id: str | None = Query(default=None),
     status_filter: ApprovalStatus | None = Query(default=None, alias="status"),
+    page: int | None = Query(default=None, ge=1),
+    page_size: int | None = Query(default=None, ge=1, le=100),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
+    import math
+
     user_org_id = _user.get("organization_id")
     user_role = str(_user.get("role", "MEMBER")).upper()
     effective_org_id = organization_id
@@ -41,15 +45,27 @@ def list_approvals(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cross-tenant access forbidden")
         effective_org_id = user_org_id
 
+    effective_page = page or 1
+    effective_limit = page_size if page_size is not None else limit
+    effective_offset = (effective_page - 1) * effective_limit if page is not None else offset
+
     service = ApprovalService(db)
     items = service.list_approval_requests(
         organization_id=effective_org_id,
         repository_id=repository_id,
         pull_request_id=pull_request_id,
         status=status_filter,
-        limit=limit,
-        offset=offset,
+        limit=effective_limit,
+        offset=effective_offset,
     )
+    total = service.count_approval_requests(
+        organization_id=effective_org_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        status=status_filter,
+    )
+    total_pages = math.ceil(total / effective_limit) if total > 0 else 1
+
     return {
         "items": [
             {
@@ -72,7 +88,10 @@ def list_approvals(
             }
             for req in items
         ],
-        "total": len(items),
+        "total": total,
+        "page": effective_page,
+        "page_size": effective_limit,
+        "total_pages": total_pages,
     }
 
 

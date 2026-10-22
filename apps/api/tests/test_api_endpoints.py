@@ -289,3 +289,36 @@ def test_phase3_review_job_endpoints(client: TestClient, db_session: Session) ->
     assert rerun_data["id"] == job_id
     assert rerun_data["status"] == "COMPLETED"
 
+
+def test_audit_events_pagination(client: TestClient, db_session: Session) -> None:
+    from datetime import UTC, datetime
+    from app.models.tool_audit import ToolExecutionAudit
+
+    # Seed an audit record
+    audit = ToolExecutionAudit(
+        principal_id="user-123",
+        organization_id="org-123",
+        repository_id="repo-123",
+        tool_name="git_diff_reader",
+        resource_type="repository",
+        resource_id="repo-123",
+        risk_level="READ_ONLY",
+        authorization_decision="ALLOW",
+        execution_status="SUCCESS",
+        started_at=datetime.now(UTC),
+    )
+    db_session.add(audit)
+    db_session.commit()
+
+    # Query with page & page_size
+    res = client.get("/api/v1/audit?page=1&page_size=10")
+    assert res.status_code == 200
+    data = res.json()
+    assert "items" in data
+    assert data["total"] >= 1
+    assert data["page"] == 1
+    assert data["page_size"] == 10
+    assert "total_pages" in data
+    assert any(a["id"] == audit.id for a in data["items"])
+
+

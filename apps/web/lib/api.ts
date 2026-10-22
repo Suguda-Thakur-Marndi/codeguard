@@ -264,8 +264,10 @@ export const api = {
       body: JSON.stringify({ action }),
     }),
 
-  getReviewJobAudit: (jobId: string) =>
-    request<import("./types").ToolExecutionAudit[]>(`/review-jobs/${jobId}/audit`),
+  getReviewJobAudit: async (jobId: string) => {
+    const res = await request<any>(`/review-jobs/${jobId}/audit`);
+    return (res?.items ?? res) as import("./types").ToolExecutionAudit[];
+  },
 
   getAuditLogs: (page = 1, pageSize = 50, organizationId?: string, repositoryId?: string, toolName?: string) => {
     const query = new URLSearchParams({ page: String(page), page_size: String(pageSize) });

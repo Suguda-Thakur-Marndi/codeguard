@@ -75,6 +75,26 @@ class ApprovalService:
 
         return list(self.db.scalars(query.offset(offset).limit(limit)).all())
 
+    def count_approval_requests(
+        self,
+        organization_id: str | None = None,
+        repository_id: str | None = None,
+        pull_request_id: str | None = None,
+        status: ApprovalStatus | None = None,
+    ) -> int:
+        from sqlalchemy import func
+        query = select(func.count(ApprovalRequest.id))
+        if organization_id:
+            query = query.where(ApprovalRequest.organization_id == organization_id)
+        if repository_id:
+            query = query.where(ApprovalRequest.repository_id == repository_id)
+        if pull_request_id:
+            query = query.where(ApprovalRequest.pull_request_id == pull_request_id)
+        if status:
+            query = query.where(ApprovalRequest.status == status)
+
+        return self.db.scalar(query) or 0
+
     def approve_request(
         self,
         approval_id: str,

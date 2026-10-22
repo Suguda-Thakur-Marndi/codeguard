@@ -37,7 +37,7 @@ class GitHubService:
         return GitHubInstallUrlResponse(
             install_url=url,
             app_slug=slug,
-            app_id=str(settings.GITHUB_APP_ID),
+            app_id=settings.GITHUB_APP_ID,
         )
 
     async def verify_installation(self, installation_id: int) -> GitHubInstallationVerifyResponse:
@@ -138,8 +138,12 @@ class GitHubService:
         for r in gh_repos:
             gh_id = r.get("id")
             existing = connected_map.get(gh_id)
-            owner_info = r.get("owner", {})
-            owner_login = owner_info.get("login") if isinstance(owner_info, dict) else org.github_account_login
+            owner_info = r.get("owner")
+            owner_login: str = org.github_account_login
+            if isinstance(owner_info, dict):
+                raw_login = owner_info.get("login")
+                if isinstance(raw_login, str) and raw_login:
+                    owner_login = raw_login
 
             annotated_repos.append(
                 GitHubAccessibleRepository(

@@ -168,4 +168,5 @@ def test_webhook_cross_tenant_isolation(db_session: Session):
     res = service.process_webhook("pull_request", "delivery-fake-1", malicious_payload)
     # Must be ignored due to installation_id mismatch
     assert res.status == "ignored"
+    assert res.message is not None
     assert "Installation ID does not match" in res.message

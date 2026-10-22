@@ -147,11 +147,14 @@ def test_approval_api_endpoints(client: TestClient, db_session: Session, test_se
         head_sha=setup["pr"].head_sha,
     )
 
-    # GET /approvals
-    res = client.get("/api/v1/approvals")
+    # GET /approvals with pagination
+    res = client.get("/api/v1/approvals?page=1&page_size=10")
     assert res.status_code == 200
     data = res.json()
     assert data["total"] >= 1
+    assert data["page"] == 1
+    assert data["page_size"] == 10
+    assert "total_pages" in data
 
     # GET /approvals/{id}
     res_single = client.get(f"/api/v1/approvals/{req.id}")
