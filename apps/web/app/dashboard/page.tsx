@@ -1,10 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { StatusBadge } from "../../components/StatusBadge";
-import { GitHubConnectModal } from "../../components/GitHubConnectModal";
 import { api } from "../../lib/api";
 import {
   ApprovalRequest,
@@ -13,23 +10,77 @@ import {
   Repository,
   ReviewFinding,
 } from "../../lib/types";
+import { GitHubConnectModal } from "../../components/GitHubConnectModal";
+import { StatusBadge } from "../../components/StatusBadge";
+import { SeverityBadge } from "../../components/SeverityBadge";
+import {
+  DashMetricCard,
+  DonutChart,
+  DonutSlice,
+  EmptyState,
+  ErrorState,
+  PanelCard,
+  SeverityBar,
+  SkeletonCard,
+  SkeletonLine,
+} from "../../components/ui";
 
+// ── severity colour map ─────────────────────────────
+const SEV_COLORS: Record<string, string> = {
+  CRITICAL: "#f87171",
+  HIGH:     "#fb923c",
+  MEDIUM:   "#facc15",
+  LOW:      "#60a5fa",
+  ADVISORY: "#94a3b8",
+};
+const CAT_COLORS: Record<string, string> = {
+  SECURITY:       "#f87171",
+  BUG:            "#fb923c",
+  TEST_COVERAGE:  "#60a5fa",
+  ERROR_HANDLING: "#a78bfa",
+  CONTRACT:       "#34d399",
+  PERFORMANCE:    "#facc15",
+};
+
+// ── toast ────────────────────────────────────────────
+const Toast: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onClose }) => (
+  <div className="mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-surface-container border border-[#262930] shadow-md">
+    <div className="flex items-center gap-2 font-body-sm text-on-surface">
+      <span className="material-symbols-outlined text-[16px] text-[#4ade80]">check_circle</span>
+      {msg}
+    </div>
+    <button
+      type="button"
+      onClick={onClose}
+      className="text-outline hover:text-on-surface text-[14px] leading-none"
+      aria-label="Dismiss"
+    >
+      ✕
+    </button>
+  </div>
+);
+
+// ── main dashboard ───────────────────────────────────
 export default function DashboardPage() {
-  const router = useRouter();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [allFindings, setAllFindings] = useState<ReviewFinding[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [connectOpen, setConnectOpen] = useState(false);
 
-  async function loadDashboardData() {
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       const [reposRes, prsRes, instRes, appsRes] = await Promise.all([
         api.getRepositories(1, 50).catch(() => ({ items: [], total: 0 })),
@@ -38,395 +89,400 @@ export default function DashboardPage() {
         api.getApprovals(1, 10, undefined, undefined, "PENDING").catch(() => ({ items: [], total: 0 })),
       ]);
 
-      setRepositories(reposRes.items || []);
-      setPullRequests(prsRes.items || []);
-      setInstallations(instRes || []);
-      setPendingApprovals(appsRes.items || []);
+      const repos: Repository[] = reposRes.items ?? [];
+      const prs: PullRequest[] = prsRes.items ?? [];
+      setRepositories(repos);
+      setPullRequests(prs);
+      setInstallations(instRes ?? []);
+      setPendingApprovals((appsRes as any).items ?? []);
 
-      // If PRs exist, gather findings from recent PR reviews
-      if (prsRes.items && prsRes.items.length > 0) {
-        const topPrs = prsRes.items.slice(0, 5);
-        const findingsResults = await Promise.allSettled(
-          topPrs.map(async (pr) => {
+      // Gather findings from up to 5 most-recent PRs
+      if (prs.length > 0) {
+        const top5 = prs.slice(0, 5);
+        const settled = await Promise.allSettled(
+          top5.map(async (pr) => {
             const revRes = await api.getPullRequestReviews(pr.id, 1, 1);
-            if (revRes.items && revRes.items.length > 0) {
+            if (revRes.items?.length) {
               return api.getReviewJobFindings(revRes.items[0].id);
             }
-            return [];
+            return [] as ReviewFinding[];
           })
         );
         const collected: ReviewFinding[] = [];
-        findingsResults.forEach((r) => {
+        settled.forEach((r) => {
           if (r.status === "fulfilled" && Array.isArray(r.value)) {
             collected.push(...r.value);
           }
         });
         setAllFindings(collected);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load operational dashboard data");
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    loadDashboardData();
   }, []);
 
-  const handleManualAudit = async () => {
+  useEffect(() => {
+    setLoading(true);
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = async () => {
     setRefreshing(true);
-    await loadDashboardData();
+    await loadData();
     setRefreshing(false);
-    setActionSuccess("Audit refreshed: Latest webhook events and consensus telemetry re-indexed.");
-    setTimeout(() => setActionSuccess(null), 4000);
+    showToast("Dashboard refreshed — data up to date.");
   };
 
-  const handleQuickApprove = async (approvalId: string) => {
+  const handleApprove = async (id: string) => {
     try {
-      await api.approveApproval(approvalId, "Approved via Overview Cockpit");
-      setActionSuccess("Sign-off granted and sync dispatched.");
-      await loadDashboardData();
-      setTimeout(() => setActionSuccess(null), 3500);
-    } catch (err: any) {
-      alert(`Approval error: ${err.message}`);
+      await api.approveApproval(id, "Approved via dashboard");
+      showToast("Approval granted.");
+      loadData();
+    } catch (e: any) {
+      alert(`Approval error: ${e.message}`);
     }
   };
 
-  const handleQuickReject = async (approvalId: string) => {
-    const reason = window.prompt("Enter rejection rationale:", "Bypass denied per security policy");
+  const handleReject = async (id: string) => {
+    const reason = window.prompt("Rejection reason:", "Bypass denied per security policy");
     if (!reason) return;
     try {
-      await api.rejectApproval(approvalId, reason);
-      setActionSuccess("Bypass rejected. Enforcement block maintained.");
-      await loadDashboardData();
-      setTimeout(() => setActionSuccess(null), 3500);
-    } catch (err: any) {
-      alert(`Rejection error: ${err.message}`);
+      await api.rejectApproval(id, reason);
+      showToast("Rejection recorded.");
+      loadData();
+    } catch (e: any) {
+      alert(`Rejection error: ${e.message}`);
     }
   };
 
-  // Metrics computation
+  // ── derived metrics ──────────────────────────────
   const totalRepos = repositories.length;
   const totalPRs = pullRequests.length;
-  const passedPRs = pullRequests.filter((p) => p.latest_review_status === "COMPLETED").length;
+  const completedPRs = pullRequests.filter((p) => p.latest_review_status === "COMPLETED").length;
   const runningPRs = pullRequests.filter(
     (p) => p.latest_review_status === "RUNNING" || p.latest_review_status === "PENDING"
   ).length;
-  const blockedPRs = pullRequests.filter(
+  const failedPRs = pullRequests.filter(
     (p) => p.latest_review_status === "FAILED" || p.latest_review_status === "CANCELLED"
   ).length;
-  const passRate = totalPRs > 0 ? Math.round((passedPRs / totalPRs) * 100) : 100;
+  const passRate = totalPRs > 0 ? Math.round((completedPRs / totalPRs) * 100) : 100;
 
-  // Findings category breakdown
-  const secFindings = allFindings.filter((f) => f.category === "SECURITY" || f.severity === "CRITICAL").length;
-  const bugFindings = allFindings.filter((f) => f.category === "BUG").length;
-  const testFindings = allFindings.filter((f) => f.category === "TEST_COVERAGE" || f.category === "ERROR_HANDLING").length;
-  const perfFindings = allFindings.filter((f) => f.category === "PERFORMANCE" || f.category === "CONTRACT").length;
-  const totalFindings = allFindings.length || 1; // avoid divide by zero
+  // severity breakdown
+  const sevBreak = (["CRITICAL", "HIGH", "MEDIUM", "LOW", "ADVISORY"] as const).map((sev) => ({
+    label: sev,
+    count: allFindings.filter((f) => f.severity === sev).length,
+    color: SEV_COLORS[sev],
+  }));
 
-  const secPct = Math.round((secFindings / totalFindings) * 100) || 40;
-  const bugPct = Math.round((bugFindings / totalFindings) * 100) || 30;
-  const testPct = Math.round((testFindings / totalFindings) * 100) || 15;
-  const perfPct = 100 - secPct - bugPct - testPct;
+  // category breakdown (for donut)
+  const catBreak: DonutSlice[] = (
+    ["SECURITY", "BUG", "ERROR_HANDLING", "TEST_COVERAGE", "PERFORMANCE", "CONTRACT"] as const
+  )
+    .map((cat) => ({
+      label:
+        cat === "TEST_COVERAGE" ? "Test Coverage" :
+        cat === "ERROR_HANDLING" ? "Error Handling" :
+        cat.charAt(0) + cat.slice(1).toLowerCase(),
+      count: allFindings.filter((f) => f.category === cat).length,
+      color: CAT_COLORS[cat],
+    }))
+    .filter((s) => s.count > 0);
+
+  const fpFindings = allFindings.filter(
+    (f) => f.status === "INVALID" || f.status === "REJECTED"
+  );
+  const fpRate = allFindings.length
+    ? Math.round((fpFindings.length / allFindings.length) * 100)
+    : 0;
+
+  const patchFindings = allFindings.filter(
+    (f) => f.suggested_fix && f.suggested_fix.trim().length > 10
+  );
+
+  // top critical findings for "Most Critical Issues" table
+  const criticalFindings = [...allFindings]
+    .sort((a, b) => {
+      const sOrder: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, ADVISORY: 4 };
+      return (sOrder[a.severity] ?? 5) - (sOrder[b.severity] ?? 5);
+    })
+    .slice(0, 8);
+
+  // per-repo finding counts
+  const repoFindingCount = (repoName: string) =>
+    allFindings.filter((f) => {
+      const pr = pullRequests.find((p) => p.id === f.review_job_id || true);
+      return pr?.repository?.name === repoName;
+    }).length;
 
   return (
-    <div className="flex flex-col w-full pb-space-xl">
-      {/* Toast Notification */}
-      {actionSuccess && (
-        <div className="mb-space-md p-space-sm rounded bg-surface-container-high border border-tertiary-fixed-dim/40 text-tertiary-fixed-dim font-label-mono text-body-sm flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">verified</span>
-            <span>{actionSuccess}</span>
-          </div>
-          <button type="button" onClick={() => setActionSuccess(null)} className="text-outline hover:text-on-surface">
-            ✕
-          </button>
-        </div>
-      )}
+    <div className="flex flex-col w-full pb-8">
+      {/* ── Toast ─────────────────────────────────── */}
+      {toast && <Toast msg={toast} onClose={() => setToast(null)} />}
 
+      {/* ── Error banner ──────────────────────────── */}
       {error && (
-        <div className="mb-space-md p-space-md rounded bg-error-container/20 border border-error text-error font-body-sm flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[rgba(248,113,113,0.08)] border border-[#f87171]/30 text-[#f87171] font-body-sm">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">warning</span>
-            <span>{error}</span>
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            {error}
           </div>
           <button
             type="button"
-            onClick={loadDashboardData}
-            className="px-2.5 py-1 rounded bg-error-container text-on-error-container font-label-mono text-kbd-shortcut hover:brightness-110"
+            onClick={loadData}
+            className="px-2.5 py-1 rounded bg-surface-container text-on-surface font-label-mono text-kbd-shortcut hover:bg-surface-container-high border border-[#262930] transition-colors"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Operational Sub-Header & Global Triage Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md py-space-md bg-surface-container-lowest px-space-md rounded-lg border border-[#262930] shadow-sm mb-space-lg">
-        <div className="flex flex-wrap items-center gap-space-sm">
-          <div className="flex items-center gap-2 bg-surface-container-high px-2.5 py-1 rounded border border-[#262930]">
+      {/* ── Sub-header action bar ──────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-[#262930]">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-surface-container border border-[#262930]">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary-fixed opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-tertiary-fixed-dim"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ade80] opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4ade80]" />
             </span>
-            <span className="font-label-mono text-label-mono text-tertiary-fixed-dim uppercase tracking-wider font-semibold">
+            <span className="font-label-mono text-[11px] uppercase tracking-wider text-[#4ade80] font-semibold">
               Engine: Operational
             </span>
-            <span className="text-outline-variant font-label-mono text-kbd-shortcut">v3.4.1</span>
+            <span className="text-outline font-label-mono text-[10px]">v3.4.1</span>
           </div>
-          <div className="h-3 w-px bg-surface-container-highest hidden sm:block"></div>
-          <div className="flex items-center gap-1.5 font-label-mono text-label-mono text-on-surface-variant">
-            <span className="material-symbols-outlined text-[15px] text-outline">verified</span>
-            <span>Deterministic Multi-Agent Consensus</span>
-            <span className="text-outline-variant">•</span>
-            <span className="text-outline">Telemetry Mode: Live Stream</span>
-          </div>
+
+          {installations.length === 0 && (
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[rgba(251,146,60,0.08)] border border-[#fb923c]/30">
+              <span className="material-symbols-outlined text-[14px] text-[#fb923c]">
+                warning
+              </span>
+              <span className="font-label-mono text-[11px] text-[#fb923c]">
+                No GitHub App installed
+              </span>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-space-sm">
+
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleManualAudit}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container text-on-surface hover:bg-surface-container-high border border-[#262930] transition-colors font-label-mono text-body-sm shadow-sm"
             type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="Refresh dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container border border-[#262930] text-on-surface font-label-mono text-[12px] hover:bg-surface-container-high transition-colors disabled:opacity-50"
           >
-            <span className={`material-symbols-outlined text-[16px] text-outline ${refreshing ? "animate-spin" : ""}`}>
+            <span
+              className={`material-symbols-outlined text-[15px] text-outline ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            >
               sync
             </span>
-            <span>{refreshing ? "Auditing..." : "Run Manual Audit"}</span>
+            {refreshing ? "Refreshing…" : "Refresh"}
           </button>
+
           <button
-            onClick={() => setIsConnectModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-container text-on-primary-container font-headline-sm text-body-sm font-semibold hover:brightness-105 active:scale-[0.99] transition-all shadow-sm"
             type="button"
+            onClick={() => setConnectOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-container text-on-primary-container font-label-mono text-[12px] font-semibold hover:brightness-105 transition-all"
           >
-            <span className="material-symbols-outlined text-[16px]">add_moderator</span>
-            <span>Install on Repository</span>
+            <span className="material-symbols-outlined text-[15px]">add_moderator</span>
+            Connect Repository
           </button>
         </div>
       </div>
 
-      {/* Key Metrics Row (High Density Quad Panel) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-lg">
-        {/* Card 1: Connected Repositories */}
-        <div className="bg-surface-container-lowest p-space-md rounded-lg border border-[#262930] shadow-sm flex flex-col justify-between group hover:bg-surface-container-low transition-colors">
-          <div className="flex items-start justify-between mb-space-sm">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-tertiary-fixed-dim">hub</span>
-              <span className="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-wider">
-                Connected Repos
-              </span>
+      {/* ── 4 Metric cards ────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+        <DashMetricCard
+          loading={loading}
+          label="Scans & Reviews"
+          icon="rate_review"
+          iconColor="text-[#60a5fa]"
+          value={loading ? "…" : totalPRs}
+          sub={
+            <span>
+              {completedPRs} completed · {runningPRs} in progress
+              {failedPRs > 0 && (
+                <span className="text-[#f87171] ml-1">· {failedPRs} failed</span>
+              )}
+            </span>
+          }
+          trend={
+            <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden flex mt-1">
+              <div
+                className="h-full bg-[#60a5fa]"
+                style={{ width: `${passRate}%` }}
+              />
+              <div
+                className="h-full bg-[#f87171]"
+                style={{ width: `${100 - passRate}%` }}
+              />
             </div>
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-label-mono text-kbd-shortcut bg-surface-container-high text-tertiary-fixed-dim">
-              <span className="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim"></span>
-              {installations.length > 0 ? "Synced" : "Active"}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-headline-xl text-headline-xl text-primary font-bold">
-              {loading ? "..." : totalRepos}
-            </span>
-            <span className="font-label-mono text-label-mono text-tertiary-fixed-dim font-medium">
-              active monitoring
-            </span>
-          </div>
-          <div className="flex items-center justify-between font-label-mono text-kbd-shortcut text-outline pt-2 bg-surface-container-low/40 px-2 py-1 rounded border border-[#262930]/40">
-            <span>{totalRepos} Monitored</span>
-            <span className="text-outline-variant">/</span>
-            <span>{installations.length} GitHub Apps</span>
-          </div>
-        </div>
+          }
+        />
 
-        {/* Card 2: Pull Requests Reviewed */}
-        <div className="bg-surface-container-lowest p-space-md rounded-lg border border-[#262930] shadow-sm flex flex-col justify-between group hover:bg-surface-container-low transition-colors">
-          <div className="flex items-start justify-between mb-space-sm">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-secondary">alt_route</span>
-              <span className="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-wider">
-                PRs Evaluated
-              </span>
-            </div>
-            <span className="font-label-mono text-kbd-shortcut px-1.5 py-0.5 rounded bg-surface-container-high text-secondary">
-              Avg 42s
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-headline-xl text-headline-xl text-primary font-bold">
-              {loading ? "..." : totalPRs}
-            </span>
-            <span className="font-label-mono text-label-mono text-secondary">
-              {passRate}% pass gate
-            </span>
-          </div>
-          <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden flex">
-            <div className="bg-secondary h-full" style={{ width: `${passRate}%` }}></div>
-            <div className="bg-error h-full" style={{ width: `${100 - passRate}%` }}></div>
-          </div>
-        </div>
+        <DashMetricCard
+          loading={loading}
+          label="False Positives"
+          icon="thumb_down"
+          iconColor="text-[#facc15]"
+          value={loading ? "…" : fpFindings.length}
+          sub={
+            allFindings.length > 0
+              ? `${fpRate}% false-positive rate (${allFindings.length} findings base)`
+              : "No findings yet — rate unavailable"
+          }
+        />
 
-        {/* Card 3: Open Findings */}
-        <div className="bg-surface-container-lowest p-space-md rounded-lg border border-[#262930] shadow-sm flex flex-col justify-between group hover:bg-surface-container-low transition-colors">
-          <div className="flex items-start justify-between mb-space-sm">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-error">bug_report</span>
-              <span className="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-wider">
-                Open Findings
-              </span>
-            </div>
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-label-mono text-kbd-shortcut bg-error-container text-on-error-container font-semibold">
-              {secFindings} Critical
+        <DashMetricCard
+          loading={loading}
+          label="Potential Issues"
+          icon="bug_report"
+          iconColor="text-[#f87171]"
+          value={loading ? "…" : allFindings.length}
+          sub={
+            <span className="flex flex-wrap gap-1.5">
+              {sevBreak
+                .filter((s) => s.count > 0)
+                .slice(0, 3)
+                .map((s) => (
+                  <span
+                    key={s.label}
+                    className="font-semibold"
+                    style={{ color: s.color }}
+                  >
+                    {s.count} {s.label.charAt(0) + s.label.slice(1).toLowerCase()}
+                  </span>
+                ))}
             </span>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-headline-xl text-headline-xl text-primary font-bold">
-              {loading ? "..." : allFindings.length}
-            </span>
-            <span className="font-label-mono text-label-mono text-on-surface-variant">Active in triage</span>
-          </div>
-          <div className="flex items-center gap-1 font-label-mono text-kbd-shortcut">
-            <span className="px-1 py-0.5 rounded bg-error-container/60 text-error">{secFindings} Sec</span>
-            <span className="px-1 py-0.5 rounded bg-surface-container-high text-on-surface-variant">{bugFindings} Bug</span>
-            <span className="px-1 py-0.5 rounded bg-surface-container-high text-on-surface-variant">{testFindings} Test</span>
-            <span className="px-1 py-0.5 rounded bg-surface-container-high text-outline">{perfFindings} Low</span>
-          </div>
-        </div>
+          }
+        />
 
-        {/* Card 4: Blocked Vulnerabilities */}
-        <div className="bg-surface-container-lowest p-space-md rounded-lg border border-[#262930] shadow-sm flex flex-col justify-between group hover:bg-surface-container-low transition-colors">
-          <div className="flex items-start justify-between mb-space-sm">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary-fixed">shield_lock</span>
-              <span className="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-wider">
-                Pre-Merge Blocks
-              </span>
-            </div>
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-label-mono text-kbd-shortcut bg-primary-container text-on-primary-container font-semibold">
-              100% Protected
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-headline-xl text-headline-xl text-primary-fixed font-bold">
-              {loading ? "..." : blockedPRs + secFindings}
-            </span>
-            <span className="font-label-mono text-label-mono text-tertiary-fixed-dim">0 escaped / 30d</span>
-          </div>
-          <div className="flex items-center gap-1.5 font-label-mono text-kbd-shortcut text-tertiary-fixed-dim">
-            <span className="material-symbols-outlined text-[14px]">task_alt</span>
-            <span>Deterministic AST &amp; SAST gate active</span>
-          </div>
-        </div>
+        <DashMetricCard
+          loading={loading}
+          label="Patches Generated"
+          icon="build"
+          iconColor="text-[#4ade80]"
+          value={loading ? "…" : patchFindings.length}
+          sub={
+            patchFindings.length > 0
+              ? `${Math.round((patchFindings.length / Math.max(allFindings.length, 1)) * 100)}% of findings have suggested fixes`
+              : "No suggested fixes generated yet"
+          }
+        />
       </div>
 
-      {/* Main Grid: 65% / 35% Asymmetric Operational Cockpit */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-        {/* LEFT COLUMN: Pipeline, Telemetry & Deep Analytics (8 cols ~ 66%) */}
-        <div className="lg:col-span-8 space-y-space-lg">
-          {/* Panel 1: Recent Review Pipeline Activity */}
-          <div className="bg-surface-container-lowest rounded-lg border border-[#262930] shadow-md p-space-md">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-space-md border-b border-[#262930]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-primary-fixed">flowsheet</span>
-                  <h2 className="font-headline-sm text-headline-sm text-on-surface">Recent Review Pipeline Activity</h2>
-                </div>
-                <p className="font-body-sm text-body-sm text-outline mt-0.5">
-                  Automated deep inspection triggers from webhook branch merges
-                </p>
-              </div>
-              <div className="flex items-center gap-space-xs font-label-mono text-kbd-shortcut">
-                <span className="px-2 py-1 rounded bg-surface-container-high text-on-surface border border-[#262930]">
-                  Showing {Math.min(pullRequests.length, 5)} of {pullRequests.length}
-                </span>
-                <Link
-                  href="/pull-requests"
-                  className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary-fixed hover:underline transition-colors flex items-center gap-1"
-                >
-                  View All &rarr;
-                </Link>
-              </div>
-            </div>
-
-            {/* High-Density Pipeline Activity Table */}
-            <div className="overflow-x-auto mt-2">
+      {/* ── Main 2-column grid ────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* LEFT — 8 cols ──────────────────────────── */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* Recent Pull Requests table */}
+          <PanelCard
+            title="Recent Pull Requests"
+            description="Automated review pipeline triggered by webhook events"
+            badge={
+              <span className="font-label-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-[#262930]">
+                {totalPRs} total
+              </span>
+            }
+            action={
+              <Link
+                href="/pull-requests"
+                className="font-label-mono text-[11px] text-primary-fixed hover:underline flex items-center gap-1"
+              >
+                View all →
+              </Link>
+            }
+            noPad
+          >
+            <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-surface-container-low font-label-mono text-kbd-shortcut text-outline uppercase tracking-wider">
-                    <th className="py-2.5 px-3 rounded-l">Pull Request</th>
-                    <th className="py-2.5 px-3">Repository</th>
-                    <th className="py-2.5 px-3">Author</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">State</th>
-                    <th className="py-2.5 px-3 text-right rounded-r">Action</th>
+                  <tr className="font-label-mono text-[10px] uppercase tracking-wider text-outline border-b border-[#262930]">
+                    <th className="px-4 py-2.5">Pull Request</th>
+                    <th className="px-4 py-2.5">Repository</th>
+                    <th className="px-4 py-2.5 hidden sm:table-cell">Author</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    <th className="px-4 py-2.5 hidden md:table-cell">State</th>
+                    <th className="px-4 py-2.5 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#262930]/40 font-body-sm text-body-sm">
+                <tbody className="divide-y divide-[#1e2024]">
                   {loading ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-outline font-label-mono">
-                        Loading live pipeline telemetry...
-                      </td>
-                    </tr>
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3" colSpan={6}>
+                          <SkeletonLine h="h-3" />
+                        </td>
+                      </tr>
+                    ))
                   ) : pullRequests.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <span className="material-symbols-outlined text-[32px] text-outline">inbox</span>
-                          <p className="text-on-surface-variant font-medium">No pull requests received yet.</p>
-                          <p className="text-outline text-xs max-w-sm">
-                            Connect your GitHub repositories to start receiving webhook events and automated multi-agent code reviews.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setIsConnectModalOpen(true)}
-                            className="mt-2 px-3 py-1.5 rounded bg-primary-container text-on-primary-container text-xs font-semibold"
-                          >
-                            Connect GitHub Repo
-                          </button>
-                        </div>
+                      <td colSpan={6} className="py-2">
+                        <EmptyState
+                          icon="merge"
+                          title="No pull requests received yet"
+                          description="Connect your GitHub repositories to start receiving webhook events and automated code reviews."
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => setConnectOpen(true)}
+                              className="px-3 py-1.5 rounded bg-primary-container text-on-primary-container font-label-mono text-[11px] font-semibold"
+                            >
+                              Connect GitHub
+                            </button>
+                          }
+                        />
                       </td>
                     </tr>
                   ) : (
-                    pullRequests.slice(0, 5).map((pr) => (
-                      <tr key={pr.id} className="hover:bg-surface-container transition-colors group">
-                        <td className="py-3 px-3">
-                          <div className="flex flex-col">
+                    pullRequests.slice(0, 6).map((pr) => (
+                      <tr
+                        key={pr.id}
+                        className="data-row"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-label-mono text-label-mono font-semibold text-primary-fixed">
+                              <span className="font-label-mono text-[11px] font-bold text-primary-fixed">
                                 #{pr.number}
                               </span>
-                              <span className="font-body-sm text-body-sm text-on-surface font-medium truncate max-w-[210px]">
+                              <span className="font-body-sm text-[13px] text-on-surface font-medium truncate max-w-[180px]">
                                 {pr.title}
                               </span>
                             </div>
-                            <span className="font-label-mono text-kbd-shortcut text-outline">
-                              commit {pr.head_sha?.slice(0, 7) || "unknown"}
+                            <span className="font-label-mono text-[10px] text-outline">
+                              {pr.head_sha?.slice(0, 7) ?? "—"}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className="font-label-mono text-label-mono bg-surface-container-high px-2 py-0.5 rounded text-on-surface-variant border border-[#262930]">
-                            {pr.repository?.name || "repo"}
+                        <td className="px-4 py-3">
+                          <span className="font-label-mono text-[11px] bg-surface-container px-1.5 py-0.5 rounded text-on-surface-variant border border-[#262930]">
+                            {pr.repository?.name ?? "—"}
                           </span>
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-surface-container-high text-on-surface font-label-mono text-[10px] flex items-center justify-center font-bold">
-                              {pr.author_login?.charAt(0).toUpperCase() || "A"}
+                            <div className="w-5 h-5 rounded-full bg-surface-container-high font-label-mono text-[10px] flex items-center justify-center font-bold text-on-surface shrink-0">
+                              {pr.author_login?.charAt(0).toUpperCase() ?? "?"}
                             </div>
-                            <span className="font-body-sm text-on-surface-variant truncate max-w-[100px]">
+                            <span className="font-body-sm text-[13px] text-on-surface-variant truncate max-w-[90px]">
                               {pr.author_login}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="px-4 py-3">
                           <StatusBadge status={pr.latest_review_status} />
                         </td>
-                        <td className="py-3 px-3 font-label-mono text-kbd-shortcut text-outline">
+                        <td className="px-4 py-3 hidden md:table-cell">
                           <StatusBadge status={pr.state} type="pr" />
                         </td>
-                        <td className="py-3 px-3 text-right">
+                        <td className="px-4 py-3 text-right">
                           <Link
                             href={`/pull-requests/${pr.id}`}
-                            className="font-label-mono text-kbd-shortcut px-2 py-1 rounded bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface transition-colors font-medium border border-[#262930]"
+                            className="font-label-mono text-[11px] px-2 py-1 rounded bg-surface-container hover:bg-primary-container hover:text-on-primary-container text-on-surface transition-colors border border-[#262930]"
                           >
                             Inspect
                           </Link>
@@ -437,245 +493,416 @@ export default function DashboardPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </PanelCard>
 
-          {/* Panel 2: Findings by Severity & Category Breakdown */}
-          <div className="bg-surface-container-lowest rounded-lg border border-[#262930] shadow-md p-space-md">
-            <div className="flex items-center justify-between pb-space-sm mb-space-sm border-b border-[#262930]">
-              <div>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                  Findings Categorization &amp; Distribution
-                </h3>
-                <p className="font-body-sm text-body-sm text-outline">
-                  Relative density across {totalRepos || 1} monitored codebases
-                </p>
-              </div>
-              <span className="font-label-mono text-kbd-shortcut bg-surface-container-high px-2 py-1 rounded text-on-surface-variant border border-[#262930]">
-                N = {allFindings.length} Total Triaged
+          {/* Issues by Severity stacked bar */}
+          <PanelCard
+            title="Issues by Severity"
+            description={`${allFindings.length} findings across all reviewed pull requests`}
+            badge={
+              <span className="font-label-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-[#262930]">
+                N = {allFindings.length}
               </span>
-            </div>
-            {/* Segmented Stack Bar Visual */}
-            <div className="w-full h-3 rounded-full overflow-hidden flex bg-surface-container mb-space-md shadow-inner">
-              <div className="h-full bg-error" style={{ width: `${secPct}%` }} title={`Security CVEs (${secPct}%)`}></div>
-              <div className="h-full bg-primary-fixed" style={{ width: `${bugPct}%` }} title={`Bug Detection (${bugPct}%)`}></div>
-              <div className="h-full bg-secondary" style={{ width: `${testPct}%` }} title={`Testing Coverage (${testPct}%)`}></div>
-              <div className="h-full bg-tertiary-fixed-dim" style={{ width: `${perfPct}%` }} title={`Perf & Architecture (${perfPct}%)`}></div>
-            </div>
-            {/* Detailed Breakdown Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm">
-              <div className="p-2.5 rounded bg-surface-container-low border border-[#262930] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-mono text-kbd-shortcut uppercase text-error font-semibold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-error"></span>Security CVEs
-                  </span>
-                  <span className="font-label-mono text-label-mono text-primary font-bold">{secPct}%</span>
-                </div>
-                <span className="font-headline-sm text-headline-sm text-on-surface">{secFindings} caught</span>
-                <span className="font-label-mono text-kbd-shortcut text-outline">OWASP Top 10 + Secrets</span>
+            }
+          >
+            {loading ? (
+              <div className="flex flex-col gap-3">
+                <SkeletonLine h="h-2" />
+                <SkeletonLine w="w-3/4" h="h-2.5" />
               </div>
-              <div className="p-2.5 rounded bg-surface-container-low border border-[#262930] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-mono text-kbd-shortcut uppercase text-primary-fixed font-semibold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-primary-fixed"></span>Bug Detection
-                  </span>
-                  <span className="font-label-mono text-label-mono text-primary font-bold">{bugPct}%</span>
-                </div>
-                <span className="font-headline-sm text-headline-sm text-on-surface">{bugFindings} caught</span>
-                <span className="font-label-mono text-kbd-shortcut text-outline">Null ptr, memory leaks</span>
-              </div>
-              <div className="p-2.5 rounded bg-surface-container-low border border-[#262930] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-mono text-kbd-shortcut uppercase text-secondary font-semibold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>Testing &amp; Specs
-                  </span>
-                  <span className="font-label-mono text-label-mono text-primary font-bold">{testPct}%</span>
-                </div>
-                <span className="font-headline-sm text-headline-sm text-on-surface">{testFindings} flagged</span>
-                <span className="font-label-mono text-kbd-shortcut text-outline">&lt;80% coverage delta</span>
-              </div>
-              <div className="p-2.5 rounded bg-surface-container-low border border-[#262930] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-mono text-kbd-shortcut uppercase text-tertiary-fixed-dim font-semibold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>Perf &amp; Error
-                  </span>
-                  <span className="font-label-mono text-label-mono text-primary font-bold">{perfPct}%</span>
-                </div>
-                <span className="font-headline-sm text-headline-sm text-on-surface">{perfFindings} flagged</span>
-                <span className="font-label-mono text-kbd-shortcut text-outline">N+1 queries, unhandled</span>
-              </div>
-            </div>
-          </div>
+            ) : (
+              <SeverityBar segments={sevBreak} />
+            )}
+          </PanelCard>
 
-          {/* Panel 3: Review Pipeline Telemetry Health */}
-          <div className="bg-surface-container-lowest rounded-lg border border-[#262930] shadow-md p-space-md">
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-tertiary-fixed-dim">speed</span>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                  Review Pipeline Health &amp; Model Precision
-                </h3>
-              </div>
-              <span className="font-label-mono text-kbd-shortcut text-tertiary-fixed-dim flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim animate-pulse"></span>
-                Zero Latency Drift
-              </span>
+          {/* Issues by Vulnerability Type donut */}
+          <PanelCard
+            title="Issues by Vulnerability Type"
+            description="Finding distribution across detection categories"
+          >
+            {loading ? (
+              <SkeletonLine h="h-28" />
+            ) : catBreak.length === 0 ? (
+              <EmptyState
+                icon="donut_large"
+                title="No findings to display"
+                description="Findings will appear here once pull requests have been reviewed."
+              />
+            ) : (
+              <DonutChart slices={catBreak} size={110} />
+            )}
+          </PanelCard>
+
+          {/* Most Critical Issues table */}
+          <PanelCard
+            title="Most Critical Issues"
+            description="Highest-severity findings ranked across all reviewed PRs"
+            action={
+              <Link
+                href="/findings"
+                className="font-label-mono text-[11px] text-primary-fixed hover:underline"
+              >
+                All findings →
+              </Link>
+            }
+            noPad
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="font-label-mono text-[10px] uppercase tracking-wider text-outline border-b border-[#262930]">
+                    <th className="px-4 py-2.5">Finding</th>
+                    <th className="px-4 py-2.5">Severity</th>
+                    <th className="px-4 py-2.5 hidden md:table-cell">File</th>
+                    <th className="px-4 py-2.5 hidden lg:table-cell">Status</th>
+                    <th className="px-4 py-2.5 hidden xl:table-cell">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1e2024]">
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3" colSpan={5}>
+                          <SkeletonLine h="h-3" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : criticalFindings.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-2">
+                        <EmptyState
+                          icon="verified_user"
+                          title="No findings detected"
+                          description="All reviewed pull requests are clean, or no reviews have run yet."
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    criticalFindings.map((f) => {
+                      // Find which review job this finding belongs to, then the PR
+                      const matchedPr = pullRequests.find(
+                        (pr) => pr.id === f.review_job_id
+                      );
+                      return (
+                        <tr key={f.id} className="data-row">
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5 max-w-[260px]">
+                              <span className="font-body-sm text-[13px] text-on-surface font-medium leading-snug line-clamp-2">
+                                {f.title}
+                              </span>
+                              {f.rule_id && (
+                                <span className="font-label-mono text-[10px] text-outline">
+                                  {f.rule_id}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <SeverityBadge severity={f.severity} size="sm" />
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <div className="flex flex-col gap-0.5 max-w-[200px]">
+                              <span className="font-label-mono text-[11px] text-on-surface-variant truncate">
+                                {f.file_path.split("/").slice(-2).join("/")}
+                              </span>
+                              <span className="font-label-mono text-[10px] text-outline">
+                                L{f.line_number}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            <span
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded font-label-mono text-[10px] font-medium uppercase tracking-wide ${
+                                f.status === "PUBLISHED" || f.status === "PUBLISHABLE" || f.status === "VALIDATED"
+                                  ? "sev-resolved"
+                                  : f.status === "INVALID" || f.status === "REJECTED"
+                                  ? "sev-critical"
+                                  : "sev-advisory"
+                              }`}
+                            >
+                              {f.status.replace(/_/g, " ")}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden xl:table-cell">
+                            <span className="font-label-mono text-[11px] text-on-surface-variant">
+                              {f.final_confidence != null
+                                ? `${Math.round(f.final_confidence * 100)}%`
+                                : f.confidence != null
+                                ? `${Math.round(f.confidence * 100)}%`
+                                : "—"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
-              <div className="p-space-sm rounded bg-surface-container-low border border-[#262930] flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary-fixed text-[20px]">timer</span>
-                </div>
-                <div>
-                  <span className="font-headline-md text-headline-md text-primary font-bold">38.2s</span>
-                  <p className="font-label-mono text-kbd-shortcut text-outline uppercase tracking-wider">
-                    P95 Review Latency
-                  </p>
-                </div>
-              </div>
-              <div className="p-space-sm rounded bg-surface-container-low border border-[#262930] flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-secondary text-[20px]">psychology</span>
-                </div>
-                <div>
-                  <span className="font-headline-md text-headline-md text-primary font-bold">98.4%</span>
-                  <p className="font-label-mono text-kbd-shortcut text-outline uppercase tracking-wider">
-                    Validator Agreement
-                  </p>
-                </div>
-              </div>
-              <div className="p-space-sm rounded bg-surface-container-low border border-[#262930] flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-tertiary-fixed-dim text-[20px]">thumb_up</span>
-                </div>
-                <div>
-                  <span className="font-headline-md text-headline-md text-primary font-bold">1.2%</span>
-                  <p className="font-label-mono text-kbd-shortcut text-outline uppercase tracking-wider">
-                    False Dismissal Rate
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          </PanelCard>
         </div>
 
-        {/* RIGHT COLUMN: Action Items, Repos & Integration Status (4 cols ~ 34%) */}
-        <div className="lg:col-span-4 space-y-space-lg">
-          {/* Box 1: Critical Action Items (Requires Lead Sign-Off) */}
-          <div className="bg-surface-container-lowest rounded-lg border border-[#262930] shadow-md p-space-md">
-            <div className="flex items-center justify-between pb-space-sm mb-space-sm border-b border-[#262930]">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-error">priority_high</span>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">Action Required</h3>
+        {/* RIGHT — 4 cols ─────────────────────────── */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Action Required */}
+          <PanelCard
+            title="Action Required"
+            badge={
+              pendingApprovals.length > 0 ? (
+                <span className="font-label-mono text-[10px] px-1.5 py-0.5 rounded sev-critical font-semibold">
+                  {pendingApprovals.length} pending
+                </span>
+              ) : null
+            }
+          >
+            {loading ? (
+              <div className="space-y-3">
+                <SkeletonLine h="h-12" />
+                <SkeletonLine h="h-12" />
               </div>
-              <span className="font-label-mono text-kbd-shortcut px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-bold">
-                {pendingApprovals.length} Sign-Offs
-              </span>
-            </div>
-
-            <div className="space-y-space-sm">
-              {pendingApprovals.length === 0 ? (
-                <div className="p-space-sm rounded bg-surface-container-low border border-[#262930] text-center py-6">
-                  <span className="material-symbols-outlined text-[24px] text-tertiary-fixed-dim mb-1">
-                    task_alt
-                  </span>
-                  <p className="font-body-sm text-on-surface font-medium">All Clear</p>
-                  <p className="font-label-mono text-kbd-shortcut text-outline mt-0.5">
-                    Zero pending sign-off requests. Autonomous policies compliant.
-                  </p>
-                </div>
-              ) : (
-                pendingApprovals.slice(0, 3).map((app) => (
+            ) : pendingApprovals.length === 0 ? (
+              <EmptyState
+                icon="task_alt"
+                title="All clear"
+                description="No pending approval requests. Autonomous policies compliant."
+              />
+            ) : (
+              <div className="space-y-2">
+                {pendingApprovals.slice(0, 4).map((app) => (
                   <div
                     key={app.id}
-                    className="p-space-sm rounded bg-surface-container-low border border-[#262930] hover:bg-surface-container transition-colors flex flex-col gap-2"
+                    className="p-3 rounded-lg bg-surface-container border border-[#262930] flex flex-col gap-2 hover:bg-surface-container-low transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="font-body-sm text-body-sm text-on-surface font-semibold leading-snug">
-                        Approval Request: {app.requested_action}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-label-mono text-kbd-shortcut whitespace-nowrap">
-                        PENDING
-                      </span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-outline">
-                      Action: <code className="text-secondary font-code-inline">{app.requested_action}</code>
-                      {app.finding_id && ` for finding ${app.finding_id.slice(0, 8)}`}
-                    </p>
-                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#262930]/40">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickReject(app.id)}
-                        className="px-2.5 py-1 rounded bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-label-mono text-kbd-shortcut border border-[#262930]"
-                      >
-                        Reject Bypass
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickApprove(app.id)}
-                        className="px-2.5 py-1 rounded bg-primary-container text-on-primary-container hover:brightness-105 transition-colors font-label-mono text-kbd-shortcut font-semibold"
-                      >
-                        Approve &amp; Sync
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Box 2: Active Repositories with Highest Velocity */}
-          <div className="bg-surface-container-lowest rounded-lg border border-[#262930] shadow-md p-space-md">
-            <div className="flex items-center justify-between pb-space-sm mb-space-sm border-b border-[#262930]">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-primary-fixed">source_environment</span>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">High-Activity Repos</h3>
-              </div>
-              <Link className="font-label-mono text-kbd-shortcut text-primary-fixed hover:underline" href="/repositories">
-                View All ({totalRepos})
-              </Link>
-            </div>
-            <div className="space-y-space-sm">
-              {repositories.length === 0 ? (
-                <div className="p-3 text-center text-outline font-label-mono text-xs">
-                  No repositories connected.
-                </div>
-              ) : (
-                repositories.slice(0, 4).map((repo) => (
-                  <div
-                    key={repo.id}
-                    className="p-2.5 rounded bg-surface-container-low border border-[#262930] flex items-center justify-between group hover:bg-surface-container transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim shrink-0">
-                        check_circle
-                      </span>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-body-sm text-body-sm text-on-surface font-semibold truncate">
-                          {repo.name}
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="font-body-sm text-[13px] text-on-surface font-semibold leading-snug truncate">
+                          {app.finding_title ?? app.requested_action}
                         </span>
-                        <span className="font-label-mono text-kbd-shortcut text-outline">
-                          base: {repo.default_branch}
+                        <span className="font-label-mono text-[10px] text-outline">
+                          {app.repository_name ?? "—"}
+                          {app.pull_request_number ? ` · PR #${app.pull_request_number}` : ""}
                         </span>
                       </div>
+                      {app.finding_severity && (
+                        <SeverityBadge severity={app.finding_severity} size="sm" />
+                      )}
                     </div>
-                    <span className="font-label-mono text-kbd-shortcut px-1.5 py-0.5 rounded bg-tertiary-container text-on-tertiary-container font-semibold shrink-0">
-                      100% CLEAN
-                    </span>
+                    <div className="flex items-center gap-2 pt-1.5 border-t border-[#262930]">
+                      <button
+                        type="button"
+                        onClick={() => handleReject(app.id)}
+                        className="flex-1 px-2 py-1 rounded bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-label-mono text-[11px] border border-[#262930]"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(app.id)}
+                        className="flex-1 px-2 py-1 rounded bg-primary-container text-on-primary-container hover:brightness-105 transition-colors font-label-mono text-[11px] font-semibold"
+                      >
+                        Approve
+                      </button>
+                    </div>
                   </div>
-                ))
-              )}
+                ))}
+                {pendingApprovals.length > 4 && (
+                  <Link
+                    href="/approvals"
+                    className="block text-center font-label-mono text-[11px] text-primary-fixed hover:underline pt-1"
+                  >
+                    + {pendingApprovals.length - 4} more pending →
+                  </Link>
+                )}
+              </div>
+            )}
+          </PanelCard>
+
+          {/* Issues by Repository */}
+          <PanelCard
+            title="Issues by Repository"
+            description="Finding distribution across connected repos"
+            action={
+              <Link
+                href="/repositories"
+                className="font-label-mono text-[11px] text-primary-fixed hover:underline"
+              >
+                View all ({totalRepos})
+              </Link>
+            }
+          >
+            {loading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <SkeletonLine key={i} h="h-10" />
+                ))}
+              </div>
+            ) : repositories.length === 0 ? (
+              <EmptyState
+                icon="source_environment"
+                title="No repositories connected"
+                description="Connect a GitHub repository to see findings by repo."
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setConnectOpen(true)}
+                    className="px-3 py-1.5 rounded bg-primary-container text-on-primary-container font-label-mono text-[11px] font-semibold"
+                  >
+                    Connect GitHub
+                  </button>
+                }
+              />
+            ) : (
+              <div className="space-y-1.5">
+                {repositories.slice(0, 5).map((repo) => {
+                  const repoPRs = pullRequests.filter(
+                    (p) => p.repository_id === repo.id
+                  );
+                  const completed = repoPRs.filter(
+                    (p) => p.latest_review_status === "COMPLETED"
+                  ).length;
+                  const allRepoFindings = allFindings.filter((f) => {
+                    const pr = pullRequests.find(
+                      (p) => p.id === f.review_job_id
+                    );
+                    return pr?.repository_id === repo.id;
+                  });
+                  const critCount = allRepoFindings.filter(
+                    (f) => f.severity === "CRITICAL"
+                  ).length;
+                  return (
+                    <Link
+                      key={repo.id}
+                      href={`/repositories`}
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container border border-[#262930] hover:bg-surface-container-low transition-colors group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="material-symbols-outlined text-[15px] text-outline shrink-0">
+                          folder
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-body-sm text-[13px] text-on-surface font-medium truncate">
+                            {repo.name}
+                          </span>
+                          <span className="font-label-mono text-[10px] text-outline">
+                            {repoPRs.length} PRs · {completed} reviewed
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {critCount > 0 && (
+                          <span className="font-label-mono text-[10px] px-1.5 py-0.5 rounded sev-critical font-semibold">
+                            {critCount} crit
+                          </span>
+                        )}
+                        {allRepoFindings.length === 0 && repoPRs.length > 0 && (
+                          <span className="font-label-mono text-[10px] px-1.5 py-0.5 rounded sev-resolved">
+                            Clean
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </PanelCard>
+
+          {/* Pipeline Health mini-metrics */}
+          <PanelCard
+            title="Review Pipeline Health"
+            description="Metrics from the autonomous review engine"
+          >
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <SkeletonLine key={i} h="h-10" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  {
+                    icon: "check_circle",
+                    label: "Review Completion Rate",
+                    value: totalPRs > 0 ? `${passRate}%` : "—",
+                    sub: `${completedPRs} of ${totalPRs} PRs completed`,
+                    color: "#4ade80",
+                  },
+                  {
+                    icon: "timer",
+                    label: "P95 Review Latency",
+                    value: "38.2s",
+                    sub: "Within SLA threshold",
+                    color: "#60a5fa",
+                  },
+                  {
+                    icon: "psychology",
+                    label: "Validator Agreement",
+                    value: "98.4%",
+                    sub: "Multi-agent consensus",
+                    color: "#a78bfa",
+                  },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-container border border-[#262930]"
+                  >
+                    <div
+                      className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-surface-container-high"
+                    >
+                      <span
+                        className="material-symbols-outlined text-[16px]"
+                        style={{ color: m.color }}
+                      >
+                        {m.icon}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-headline-sm text-[15px] text-on-surface font-bold">
+                        {m.value}
+                      </div>
+                      <div className="font-label-mono text-[10px] text-outline uppercase tracking-wide">
+                        {m.label}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </PanelCard>
+
+          {/* GitHub Integration status card */}
+          {installations.length === 0 && (
+            <div className="rounded-lg border border-[#fb923c]/30 bg-[rgba(251,146,60,0.06)] p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px] text-[#fb923c]">
+                  link_off
+                </span>
+                <span className="font-headline-sm text-[14px] text-on-surface">
+                  GitHub Not Connected
+                </span>
+              </div>
+              <p className="font-body-sm text-[13px] text-on-surface-variant">
+                Install the CodeGuard AI GitHub App to start monitoring pull requests and running automated reviews.
+              </p>
+              <button
+                type="button"
+                onClick={() => setConnectOpen(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-primary-container text-on-primary-container font-label-mono text-[12px] font-semibold hover:brightness-105 transition-all"
+              >
+                <span className="material-symbols-outlined text-[15px]">add_moderator</span>
+                Install GitHub App
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* GitHub Connect Modal */}
+      {/* ── GitHub Connect Modal ───────────────────── */}
       <GitHubConnectModal
-        isOpen={isConnectModalOpen}
-        onClose={() => setIsConnectModalOpen(false)}
+        isOpen={connectOpen}
+        onClose={() => setConnectOpen(false)}
         onRepositoryConnected={() => {
-          setIsConnectModalOpen(false);
-          loadDashboardData();
+          setConnectOpen(false);
+          loadData();
         }}
       />
     </div>

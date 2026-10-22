@@ -26,6 +26,7 @@ def list_audit_events(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
     import math
+
     from sqlalchemy import func
 
     query = select(ToolExecutionAudit).order_by(ToolExecutionAudit.created_at.desc())

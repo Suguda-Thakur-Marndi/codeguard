@@ -26,7 +26,44 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        response.headers["Permissions-Policy"] = (
+            "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+            "magnetometer=(), microphone=(), payment=(), usb=()"
+        )
+        if settings.APP_ENV == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         return response
+
+
+MAX_BODY_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB payload limit
+
+
+class MaxPayloadSizeMiddleware(BaseHTTPMiddleware):
+    """Rejects incoming HTTP requests with Content-Length exceeding the configured threshold."""
+
+    def __init__(self, app: FastAPI, max_bytes: int = MAX_BODY_SIZE_BYTES):
+        super().__init__(app)
+        self.max_bytes = max_bytes
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        content_length = request.headers.get("Content-Length")
+        if content_length:
+            try:
+                length = int(content_length)
+                if length > self.max_bytes:
+                    return JSONResponse(
+                        status_code=413,
+                        content={
+                            "error": {
+                                "code": "PAYLOAD_TOO_LARGE",
+                                "message": f"Request entity exceeds the maximum allowed size of {self.max_bytes} bytes",
+                            }
+                        },
+                    )
+            except ValueError:
+                pass
+        return await call_next(request)
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -103,6 +140,9 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.APP_ENV != "production" else None,
         lifespan=lifespan,
     )
+
+    # 0. Request payload size cap
+    app.add_middleware(MaxPayloadSizeMiddleware)
 
     # 1. Security Headers
     app.add_middleware(SecurityHeadersMiddleware)

@@ -292,6 +292,7 @@ def test_phase3_review_job_endpoints(client: TestClient, db_session: Session) ->
 
 def test_audit_events_pagination(client: TestClient, db_session: Session) -> None:
     from datetime import UTC, datetime
+
     from app.models.tool_audit import ToolExecutionAudit
 
     # Seed an audit record

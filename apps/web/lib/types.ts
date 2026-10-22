@@ -224,7 +224,8 @@ export type FindingCategory =
   | "ERROR_HANDLING"
   | "TEST_COVERAGE"
   | "CONTRACT"
-  | "PERFORMANCE";
+  | "PERFORMANCE"
+  | "ARCHITECTURE";
 
 export type FindingSeverity =
   | "CRITICAL"

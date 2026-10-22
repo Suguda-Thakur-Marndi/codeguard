@@ -11,6 +11,21 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+// Nav group definition
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  badge?: string;
+  badgeVariant?: "default" | "danger";
+  activeMatch: (p: string) => boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const [repositories, setRepositories] = useState<Repository[]>([]);
@@ -20,9 +35,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [githubConnected, setGithubConnected] = useState<boolean>(false);
   const [engineStatus, setEngineStatus] = useState<string>("Online");
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    // Fetch live summary counts for navigation badges
     Promise.allSettled([
       api.getRepositories(1, 20),
       api.getPullRequests(1, 1),
@@ -32,15 +47,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     ]).then(([reposRes, prsRes, appsRes, instRes, readyRes]) => {
       if (reposRes.status === "fulfilled" && reposRes.value?.items) {
         setRepositories(reposRes.value.items);
-        if (reposRes.value.items.length > 0) {
-          setSelectedRepo(reposRes.value.items[0]);
-        }
+        if (reposRes.value.items.length > 0) setSelectedRepo(reposRes.value.items[0]);
       }
       if (prsRes.status === "fulfilled" && prsRes.value) {
         setPrCount(prsRes.value.total || prsRes.value.items?.length || 0);
       }
       if (appsRes.status === "fulfilled" && appsRes.value) {
-        setPendingApprovalCount(appsRes.value.total || appsRes.value.items?.length || 0);
+        setPendingApprovalCount((appsRes.value as any).total || (appsRes.value as any).items?.length || 0);
       }
       if (instRes.status === "fulfilled" && Array.isArray(instRes.value)) {
         setGithubConnected(instRes.value.length > 0);
@@ -51,136 +64,197 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     });
   }, []);
 
-  const navLinks = [
+  const navGroups: NavGroup[] = [
     {
-      href: "/dashboard",
-      label: "Overview",
-      icon: "grid_view",
-      activeMatch: (p: string) => p === "/" || p === "/dashboard",
+      label: "Analytics",
+      items: [
+        {
+          href: "/dashboard",
+          label: "Overview",
+          icon: "grid_view",
+          activeMatch: (p) => p === "/" || p === "/dashboard",
+        },
+        {
+          href: "/repositories",
+          label: "Repositories",
+          icon: "source_environment",
+          badge: repositories.length > 0 ? String(repositories.length) : undefined,
+          activeMatch: (p) => p.startsWith("/repositories"),
+        },
+        {
+          href: "/pull-requests",
+          label: "Pull Requests",
+          icon: "merge",
+          badge: prCount > 0 ? String(prCount) : undefined,
+          activeMatch: (p) => p.startsWith("/pull-requests"),
+        },
+        {
+          href: "/reviews",
+          label: "Reviews",
+          icon: "rate_review",
+          activeMatch: (p) => p.startsWith("/reviews"),
+        },
+        {
+          href: "/findings",
+          label: "Findings",
+          icon: "bug_report",
+          activeMatch: (p) => p.startsWith("/findings"),
+        },
+        {
+          href: "/diff-review",
+          label: "Code Diff",
+          icon: "difference",
+          activeMatch: (p) => p.startsWith("/diff-review"),
+        },
+      ],
     },
     {
-      href: "/repositories",
-      label: "Repositories",
-      icon: "source_environment",
-      badge: repositories.length > 0 ? String(repositories.length) : undefined,
-      activeMatch: (p: string) => p.startsWith("/repositories"),
-    },
-    {
-      href: "/pull-requests",
-      label: "Pull Requests",
-      icon: "merge",
-      badge: prCount > 0 ? String(prCount) : undefined,
-      activeMatch: (p: string) => p.startsWith("/pull-requests"),
-    },
-    {
-      href: "/reviews",
-      label: "Reviews",
-      icon: "rate_review",
-      activeMatch: (p: string) => p.startsWith("/reviews"),
-    },
-    {
-      href: "/diff-review",
-      label: "Code Diff",
-      icon: "difference",
-      activeMatch: (p: string) => p.startsWith("/diff-review"),
-    },
-    {
-      href: "/findings",
-      label: "Findings",
-      icon: "upload_2",
-      activeMatch: (p: string) => p.startsWith("/findings"),
-    },
-    {
-      href: "/benchmarks",
-      label: "Benchmarks",
-      icon: "speed",
-      activeMatch: (p: string) => p.startsWith("/benchmarks"),
-    },
-    {
-      href: "/policies",
-      label: "Policies",
-      icon: "verified_user",
-      activeMatch: (p: string) => p.startsWith("/policies"),
-    },
-    {
-      href: "/approvals",
-      label: "Approvals",
-      icon: "assignment_turned_in",
-      badge: pendingApprovalCount > 0 ? String(pendingApprovalCount) : undefined,
-      badgeColor: "bg-error-container text-on-error-container",
-      activeMatch: (p: string) => p.startsWith("/approvals"),
-    },
-    {
-      href: "/audit",
-      label: "Audit Logs",
-      icon: "history_edu",
-      activeMatch: (p: string) => p.startsWith("/audit"),
+      label: "Governance",
+      items: [
+        {
+          href: "/policies",
+          label: "Policies",
+          icon: "verified_user",
+          activeMatch: (p) => p.startsWith("/policies"),
+        },
+        {
+          href: "/approvals",
+          label: "Approvals",
+          icon: "assignment_turned_in",
+          badge: pendingApprovalCount > 0 ? String(pendingApprovalCount) : undefined,
+          badgeVariant: "danger",
+          activeMatch: (p) => p.startsWith("/approvals"),
+        },
+        {
+          href: "/audit",
+          label: "Audit Logs",
+          icon: "history_edu",
+          activeMatch: (p) => p.startsWith("/audit"),
+        },
+        {
+          href: "/benchmarks",
+          label: "Benchmarks",
+          icon: "speed",
+          activeMatch: (p) => p.startsWith("/benchmarks"),
+        },
+      ],
     },
   ];
 
+  const isActive = (item: NavItem) => item.activeMatch(pathname);
+
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
           onClick={onClose}
+          aria-hidden
         />
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest z-50 flex flex-col justify-between select-none border-r border-[#262930] transition-transform duration-200 ease-in-out ${
+        className={`fixed left-0 top-0 h-screen bg-surface-container-lowest z-50 flex flex-col border-r border-[#262930] select-none transition-all duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        } ${collapsed ? "w-14" : "w-60"}`}
+        aria-label="Primary navigation"
       >
-        <div className="flex flex-col min-h-0">
-          {/* Top Logo & Enterprise Badge */}
-          <div className="h-14 px-space-md flex items-center justify-between bg-surface-container-low border-b border-[#262930]">
-            <Link href="/dashboard" className="flex items-center gap-space-sm min-w-0" onClick={onClose}>
-              <div className="w-8 h-8 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-label-mono font-bold text-sm tracking-tighter">
+        {/* ── Logo + collapse toggle ─────────────── */}
+        <div className="h-13 flex items-center justify-between px-3 py-2 border-b border-[#262930] bg-surface-container-low">
+          {!collapsed && (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2.5 min-w-0"
+              onClick={onClose}
+            >
+              <div className="w-7 h-7 rounded-md bg-primary-container text-on-primary-container flex items-center justify-center font-label-mono font-bold text-[11px] tracking-tight shrink-0">
                 CG
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="font-headline-sm text-headline-sm text-primary tracking-tight truncate leading-none">
+                <span className="font-headline-sm text-[13px] text-on-surface font-semibold truncate leading-tight">
                   CodeGuard AI
                 </span>
-                <span className="font-label-mono text-label-mono text-outline uppercase mt-0.5">
+                <span className="font-label-mono text-[9px] uppercase tracking-widest text-outline">
                   Autonomous Core
                 </span>
               </div>
             </Link>
-            <span className="px-1.5 py-0.5 rounded font-label-mono text-kbd-shortcut bg-primary-container text-on-primary-container font-semibold tracking-wider">
-              ENTERPRISE
-            </span>
-          </div>
-
-          {/* Active Repository Switcher Dropdown */}
-          <div className="p-space-sm relative">
-            <button
-              className="w-full flex items-center justify-between px-space-sm py-space-xs rounded bg-surface-container-low hover:bg-surface-container-high transition-colors text-left border border-[#262930]"
-              type="button"
-              onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
+          )}
+          {collapsed && (
+            <Link
+              href="/dashboard"
+              className="w-7 h-7 rounded-md bg-primary-container text-on-primary-container flex items-center justify-center font-label-mono font-bold text-[11px] mx-auto"
+              onClick={onClose}
+              aria-label="CodeGuard AI home"
             >
-              <div className="flex items-center gap-space-xs min-w-0">
-                <span className="material-symbols-outlined text-[16px] text-primary-fixed">folder_open</span>
+              CG
+            </Link>
+          )}
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="text-outline hover:text-on-surface transition-colors p-1 rounded hover:bg-surface-container-high"
+              aria-label="Collapse sidebar"
+            >
+              <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+            </button>
+          )}
+        </div>
+
+        {/* Expand button when collapsed */}
+        {collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="w-full py-2 flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container transition-colors border-b border-[#262930]"
+            aria-label="Expand sidebar"
+          >
+            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+          </button>
+        )}
+
+        {/* ── Repository switcher (hidden when collapsed) ─── */}
+        {!collapsed && (
+          <div className="p-2 border-b border-[#262930] relative">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-surface-container hover:bg-surface-container-high transition-colors border border-[#262930] text-left"
+              onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
+              aria-expanded={repoDropdownOpen}
+              aria-haspopup="listbox"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-outlined text-[14px] text-outline shrink-0">
+                  folder_open
+                </span>
                 <div className="flex flex-col min-w-0">
-                  <span className="font-label-mono text-label-mono text-on-surface truncate">
+                  <span className="font-label-mono text-[11px] text-on-surface truncate">
                     {selectedRepo ? selectedRepo.full_name : "All Repositories"}
                   </span>
-                  <span className="font-label-mono text-kbd-shortcut text-tertiary-fixed-dim flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim inline-block"></span>
-                    {selectedRepo ? `${selectedRepo.default_branch} (monitored)` : "Multi-tenant sync"}
+                  <span className="font-label-mono text-[9px] text-outline">
+                    {selectedRepo
+                      ? `${selectedRepo.default_branch} · monitored`
+                      : "Multi-repo view"}
                   </span>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">unfold_more</span>
+              <span className="material-symbols-outlined text-[14px] text-outline shrink-0">
+                unfold_more
+              </span>
             </button>
 
-            {/* Dropdown Menu */}
             {repoDropdownOpen && (
-              <div className="absolute top-full left-space-sm right-space-sm mt-1 bg-surface-container-high border border-outline-variant/40 rounded shadow-xl z-50 max-h-48 overflow-y-auto p-1">
+              <div
+                role="listbox"
+                className="absolute top-full left-2 right-2 mt-0.5 bg-surface-container-high border border-[#262930] rounded-md shadow-xl z-50 max-h-48 overflow-y-auto py-1"
+              >
                 <div
-                  className="px-2 py-1.5 rounded hover:bg-surface-container text-xs font-label-mono text-on-surface cursor-pointer"
+                  role="option"
+                  aria-selected={selectedRepo === null}
+                  tabIndex={0}
+                  className="px-3 py-1.5 font-label-mono text-[11px] text-on-surface hover:bg-surface-container cursor-pointer"
                   onClick={() => {
                     setSelectedRepo(null);
                     setRepoDropdownOpen(false);
@@ -191,7 +265,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {repositories.map((repo) => (
                   <div
                     key={repo.id}
-                    className="px-2 py-1.5 rounded hover:bg-surface-container text-xs font-label-mono text-on-surface cursor-pointer truncate"
+                    role="option"
+                    aria-selected={selectedRepo?.id === repo.id}
+                    tabIndex={0}
+                    className="px-3 py-1.5 font-label-mono text-[11px] text-on-surface hover:bg-surface-container cursor-pointer truncate"
                     onClick={() => {
                       setSelectedRepo(repo);
                       setRepoDropdownOpen(false);
@@ -202,7 +279,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 ))}
                 <Link
                   href="/repositories"
-                  className="block px-2 py-1.5 mt-1 border-t border-[#262930] text-[11px] font-label-mono text-primary-fixed hover:underline"
+                  className="block px-3 py-1.5 mt-0.5 border-t border-[#262930] text-[10px] font-label-mono text-primary-fixed hover:underline"
                   onClick={() => setRepoDropdownOpen(false)}
                 >
                   + Add / Connect Repo
@@ -210,91 +287,127 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               </div>
             )}
           </div>
+        )}
 
-          <div className="px-space-md py-space-xs">
-            <span className="font-label-mono text-kbd-shortcut uppercase text-outline tracking-wider">
-              Workspace Console
-            </span>
-          </div>
-
-          {/* Nav links */}
-          <nav className="flex-1 overflow-y-auto px-space-sm space-y-0.5">
-            {navLinks.map((item) => {
-              const active = item.activeMatch(pathname);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-space-sm px-space-sm py-1.5 rounded transition-colors ${
-                    active
-                      ? "bg-surface-container-high text-primary-fixed font-semibold"
-                      : "font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                  {item.badge && (
-                    <span
-                      className={`ml-auto font-label-mono text-kbd-shortcut px-1.5 py-0.2 rounded ${
-                        item.badgeColor || "bg-surface-container-high text-on-surface"
+        {/* ── Navigation groups ─────────────────── */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Sidebar navigation">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              {!collapsed && (
+                <div className="px-3 pb-1">
+                  <span className="font-label-mono text-[9px] uppercase tracking-widest text-outline">
+                    {group.label}
+                  </span>
+                </div>
+              )}
+              <div className="px-1.5 space-y-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      title={collapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-2.5 rounded-md transition-colors ${
+                        collapsed ? "justify-center px-2 py-2" : "px-2.5 py-1.5"
+                      } ${
+                        active
+                          ? "bg-surface-container-high text-on-surface font-semibold"
+                          : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                       }`}
                     >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+                      <span
+                        className={`material-symbols-outlined text-[17px] shrink-0 ${
+                          active ? "text-primary-fixed" : ""
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      {!collapsed && (
+                        <>
+                          <span className="font-body-sm text-[13px] truncate">{item.label}</span>
+                          {item.badge && (
+                            <span
+                              className={`ml-auto font-label-mono text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                                item.badgeVariant === "danger"
+                                  ? "bg-[rgba(248,113,113,0.15)] text-[#f87171]"
+                                  : "bg-surface-container-high text-on-surface-variant"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
 
-        {/* Bottom Integration & Telemetry Status Cards */}
-        <div className="p-space-sm space-y-space-xs bg-surface-container-lowest border-t border-[#262930]">
-          <div className="p-space-xs rounded bg-surface-container-low flex flex-col gap-1 border border-[#262930]">
-            <div className="flex items-center justify-between">
-              <span className="font-label-mono text-kbd-shortcut uppercase text-outline">Integration</span>
-              <span
-                className={`flex items-center gap-1 font-label-mono text-kbd-shortcut ${
-                  githubConnected ? "text-tertiary-fixed-dim" : "text-amber-400"
-                }`}
-              >
+        {/* ── Bottom status footer ──────────────── */}
+        {!collapsed && (
+          <div className="p-2 border-t border-[#262930] space-y-1.5">
+            {/* Integration status */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-surface-container border border-[#262930]">
+              <div className="flex items-center gap-2">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    githubConnected ? "bg-tertiary-fixed-dim" : "bg-amber-400"
+                    githubConnected ? "bg-[#4ade80]" : "bg-[#fb923c]"
                   }`}
                 />
-                {githubConnected ? "Connected" : "Setup Required"}
+                <span className="font-label-mono text-[10px] text-on-surface-variant">
+                  {githubConnected ? "GitHub Connected" : "GitHub Not Connected"}
+                </span>
+              </div>
+            </div>
+
+            {/* Engine status */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-surface-container border border-[#262930]">
+              <span className="font-label-mono text-[10px] text-on-surface-variant">
+                Engine: {engineStatus}
               </span>
+              <span className="font-label-mono text-[9px] text-outline">v3.4</span>
             </div>
-            <span className="font-label-mono text-label-mono text-on-surface-variant truncate">
-              {githubConnected ? "GitHub App: Sync Active" : "No GitHub App Installed"}
-            </span>
-          </div>
 
-          <div className="p-space-xs rounded bg-surface-container-low flex flex-col gap-1 border border-[#262930]">
-            <div className="flex items-center justify-between">
-              <span className="font-label-mono text-kbd-shortcut uppercase text-outline">Engine</span>
-              <span className="font-label-mono text-kbd-shortcut text-primary-fixed">v3.4 Autonomous</span>
-            </div>
-            <span className="font-label-mono text-label-mono text-on-surface-variant truncate">
-              Consensus: {engineStatus}
-            </span>
+            {/* Debug link */}
+            <Link
+              href="/debug"
+              className="flex items-center justify-between px-2.5 py-1 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-mono text-[10px] transition-colors"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[13px]">terminal</span>
+                System Debug
+              </span>
+              <span className="bg-surface-container-high px-1 py-0.5 rounded text-[9px] text-outline font-bold">
+                F1
+              </span>
+            </Link>
           </div>
+        )}
 
-          <Link
-            href="/debug"
-            className="flex items-center justify-between px-space-xs py-1 text-on-surface-variant hover:text-on-surface font-label-mono text-label-mono transition-colors"
-          >
-            <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">terminal</span>
-              System Telemetry &amp; Debug
-            </span>
-            <span className="font-kbd-shortcut text-kbd-shortcut bg-surface-container-high px-1 py-0.5 rounded text-outline">
-              F1
-            </span>
-          </Link>
-        </div>
+        {/* Collapsed footer — just status dots */}
+        {collapsed && (
+          <div className="p-2 border-t border-[#262930] flex flex-col items-center gap-2">
+            <span
+              title={githubConnected ? "GitHub Connected" : "GitHub Not Connected"}
+              className={`w-2 h-2 rounded-full ${
+                githubConnected ? "bg-[#4ade80]" : "bg-[#fb923c]"
+              }`}
+            />
+            <Link
+              href="/debug"
+              title="System Debug"
+              className="text-outline hover:text-on-surface transition-colors"
+            >
+              <span className="material-symbols-outlined text-[15px]">terminal</span>
+            </Link>
+          </div>
+        )}
       </aside>
     </>
   );

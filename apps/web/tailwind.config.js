@@ -71,6 +71,9 @@ module.exports = {
         "2xl": "0.75rem",
         full: "9999px",
       },
+      height: {
+        "13": "3.25rem",  /* 52px — top header */
+      },
       spacing: {
         gutter: "1rem",
         "gutter-desktop": "1.5rem",

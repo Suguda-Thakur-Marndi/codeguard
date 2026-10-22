@@ -249,10 +249,11 @@ class SerenaNavigator:
             step8_implementation_notes="Implement only approved changes without altering public API contracts.",
             step9_targeted_tests=[f"pytest tests/test_{sym.lower()}.py" for sym in target_symbols],
             step10_reinspected_symbols=target_symbols,
-            step11_integration_tests=["verify_phase10.py", "pytest tests/"],
+            step11_integration_tests=["pytest apps/api/tests/"],
             status="COMPLETED",
         )
         return record
+
 
 
 if __name__ == "__main__":

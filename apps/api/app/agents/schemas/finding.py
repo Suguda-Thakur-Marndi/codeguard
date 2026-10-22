@@ -36,6 +36,7 @@ class FindingCategory(enum.StrEnum):
     TEST_COVERAGE = "TEST_COVERAGE"
     CONTRACT = "CONTRACT"
     PERFORMANCE = "PERFORMANCE"
+    ARCHITECTURE = "ARCHITECTURE"
 
 
 class FindingSeverity(enum.StrEnum):

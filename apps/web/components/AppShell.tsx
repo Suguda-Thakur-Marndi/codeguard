@@ -9,10 +9,14 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   return (
     <div className="min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased flex flex-col">
-      <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+      <Sidebar
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
+      />
       <TopHeader onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
-      <main className="flex-1 w-full pt-14 md:pl-64 min-h-screen bg-surface transition-all">
-        <div className="w-full px-4 sm:px-6 lg:px-gutter-desktop py-space-md">
+      {/* md:pl-60 matches the sidebar w-60 */}
+      <main className="flex-1 w-full pt-14 md:pl-60 min-h-screen bg-surface transition-all duration-200">
+        <div className="w-full px-4 sm:px-5 lg:px-6 py-4 max-w-[1600px]">
           {children}
         </div>
       </main>
