@@ -142,6 +142,7 @@ async def test_review_job_failure_handling(
 
     job = await service.execute_job(populated_job.id)
     assert job.status == ReviewJobStatus.FAILED
+    assert job.error_message is not None
     assert "GitHubNotFoundError" in job.error_message
     assert job.completed_at is not None
 
@@ -166,4 +167,5 @@ async def test_review_job_transient_error_reraises(
     # DB record should also record failure attempt
     db_session.refresh(populated_job)
     assert populated_job.status == ReviewJobStatus.FAILED
+    assert populated_job.error_message is not None
     assert "Gateway Timeout" in populated_job.error_message
