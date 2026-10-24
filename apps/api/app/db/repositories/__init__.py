@@ -13,6 +13,7 @@ from app.db.repositories.pull_request_repo import PullRequestRepository
 from app.db.repositories.repository_index_repo import RepositoryIndexRepository
 from app.db.repositories.repository_repo import RepositoryRepository
 from app.db.repositories.review_artifact_repo import ReviewArtifactRepository
+from app.db.repositories.review_finding_repo import ReviewFindingRepository
 from app.db.repositories.review_job_repo import ReviewJobRepository
 from app.db.repositories.symbol_reference_repo import SymbolReferenceRepository
 
@@ -23,6 +24,7 @@ __all__ = [
     "PullRequestRepository",
     "ReviewJobRepository",
     "ReviewArtifactRepository",
+    "ReviewFindingRepository",
     "RepositoryIndexRepository",
     "CodeSymbolRepository",
     "SymbolReferenceRepository",
