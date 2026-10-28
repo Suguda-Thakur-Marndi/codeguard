@@ -3,9 +3,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.repositories.review_finding_repo import ReviewFindingRepository
 from app.db.session import get_db
+from app.models.review_finding import ReviewFindingModel
 from app.schemas.verification import (
     FindingDetailRead,
     FindingEvidenceRead,
@@ -13,6 +14,21 @@ from app.schemas.verification import (
 )
 
 router = APIRouter(prefix="/findings", tags=["Findings"])
+
+
+def _get_verified_finding(
+    finding_id: str, repo: ReviewFindingRepository, user: dict
+) -> ReviewFindingModel:
+    """Retrieve finding and enforce tenant isolation."""
+    finding = repo.get_finding(finding_id)
+    if not finding:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Finding '{finding_id}' not found",
+        )
+    if finding.review_job and finding.review_job.pull_request and finding.review_job.pull_request.repository:
+        verify_tenant_access(user, finding.review_job.pull_request.repository.organization_id)
+    return finding
 
 
 @router.get("/{finding_id}", response_model=FindingDetailRead)
@@ -23,12 +39,7 @@ def get_finding_detail(
 ) -> FindingDetailRead:
     """Retrieve finding details with full judge decisions, validation scenarios, and evidence."""
     repo = ReviewFindingRepository(db)
-    finding = repo.get_finding(finding_id)
-    if not finding:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Finding '{finding_id}' not found",
-        )
+    finding = _get_verified_finding(finding_id, repo, _user)
     return FindingDetailRead.model_validate(finding)
 
 
@@ -40,12 +51,7 @@ def get_finding_evidence(
 ) -> list[FindingEvidenceRead]:
     """Retrieve immutable grounding evidence chain for a finding."""
     repo = ReviewFindingRepository(db)
-    finding = repo.get_finding(finding_id)
-    if not finding:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Finding '{finding_id}' not found",
-        )
+    _get_verified_finding(finding_id, repo, _user)
     items = repo.list_evidence_for_finding(finding_id)
     return [FindingEvidenceRead.model_validate(item) for item in items]
 
@@ -58,12 +64,7 @@ def get_finding_history(
 ) -> list[VerificationEventRead]:
     """Retrieve immutable audit trail history for a finding."""
     repo = ReviewFindingRepository(db)
-    finding = repo.get_finding(finding_id)
-    if not finding:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Finding '{finding_id}' not found",
-        )
+    _get_verified_finding(finding_id, repo, _user)
     events = repo.list_events_for_finding(finding_id)
     return [VerificationEventRead.model_validate(ev) for ev in events]
 

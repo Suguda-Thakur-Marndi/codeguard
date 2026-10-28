@@ -38,9 +38,8 @@ def list_approvals(
     import math
 
     user_org_id = _user.get("organization_id")
-    user_role = str(_user.get("role", "MEMBER")).upper()
     effective_org_id = organization_id
-    if user_org_id and user_role != "ADMIN":
+    if user_org_id:
         if organization_id and organization_id != user_org_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cross-tenant access forbidden")
         effective_org_id = user_org_id
@@ -107,8 +106,7 @@ def get_approval(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval request not found.")
 
     user_org_id = _user.get("organization_id")
-    user_role = str(_user.get("role", "MEMBER")).upper()
-    if user_org_id and user_role != "ADMIN" and req.organization_id != user_org_id:
+    if user_org_id and req.organization_id != user_org_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cross-tenant access forbidden")
 
     return {

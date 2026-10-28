@@ -6,9 +6,10 @@ from code_intelligence.filter.file_filter import FileFilter
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.repositories.repository_repo import RepositoryRepository
 from app.db.session import get_db
+from app.models.repository import Repository
 from app.schemas.code_intelligence import (
     CodeSymbolRead,
     FileDependencyRead,
@@ -22,6 +23,18 @@ from app.services.code_intelligence_service import CodeIntelligenceService
 router = APIRouter(prefix="/repositories", tags=["Code Intelligence"])
 
 
+def _get_verified_repo(repository_id: str, db: Session, user: dict) -> Repository:
+    """Retrieve repository and enforce tenant authorization."""
+    repo = RepositoryRepository(db).get_by_id(repository_id)
+    if not repo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Repository with ID '{repository_id}' not found",
+        )
+    verify_tenant_access(user, repo.organization_id)
+    return repo
+
+
 @router.get("/{repository_id}/index", response_model=RepositoryIndexRead)
 def get_repository_index_status(
     repository_id: str,
@@ -30,12 +43,7 @@ def get_repository_index_status(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> RepositoryIndexRead:
     """Retrieve indexing status, metadata, and performance metrics for a repository."""
-    repo = RepositoryRepository(db).get_by_id(repository_id)
-    if not repo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Repository with ID '{repository_id}' not found",
-        )
+    _get_verified_repo(repository_id, db, _user)
 
     service = CodeIntelligenceService(db)
     idx = service.get_index_status(repository_id, commit_sha=commit_sha)
@@ -55,12 +63,7 @@ def trigger_repository_indexing(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> RepositoryIndexRead:
     """Trigger full or incremental repository indexing."""
-    repo = RepositoryRepository(db).get_by_id(repository_id)
-    if not repo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Repository with ID '{repository_id}' not found",
-        )
+    _get_verified_repo(repository_id, db, _user)
 
     service = CodeIntelligenceService(db)
     idx = service.trigger_indexing(
@@ -84,6 +87,7 @@ def list_repository_symbols(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> PaginatedResponse[CodeSymbolRead]:
     """List code symbols with pagination, kind filtering, and name search."""
+    _get_verified_repo(repository_id, db, _user)
     service = CodeIntelligenceService(db)
     symbols, total = service.get_symbols(
         repository_id=repository_id,
@@ -113,6 +117,7 @@ def get_symbol_detail(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> CodeSymbolRead:
     """Retrieve details of a specific code symbol by ID."""
+    _get_verified_repo(repository_id, db, _user)
     service = CodeIntelligenceService(db)
     symbol = service.get_symbol_by_id(symbol_id)
     if not symbol or symbol.repository_id != repository_id:
@@ -132,6 +137,7 @@ def get_file_symbols(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[CodeSymbolRead]:
     """Retrieve all symbols defined in a specific repository file."""
+    _get_verified_repo(repository_id, db, _user)
     if not FileFilter.is_safe_path(file_path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -151,6 +157,7 @@ def get_file_dependencies(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[FileDependencyRead]:
     """Retrieve static file dependencies (imports) for a specific file."""
+    _get_verified_repo(repository_id, db, _user)
     if not FileFilter.is_safe_path(file_path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -174,6 +181,7 @@ def get_code_context(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> RelevantContextSchema:
     """Retrieve semantically ranked context for a changed file and symbol."""
+    _get_verified_repo(repository_id, db, _user)
     if not FileFilter.is_safe_path(changed_file):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -77,7 +77,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleMobileSidebar }) =
       authStorage.removeToken();
     }
     setCurrentUser(null);
-    window.location.reload();
+    window.location.href = "/login";
   };
 
   // Build breadcrumbs from URL path

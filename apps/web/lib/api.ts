@@ -42,6 +42,7 @@ async function request<T>(endpoint: string, options?: RequestOptions): Promise<T
   try {
     const res = await fetch(url, {
       ...options,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...authHeaders,
@@ -295,6 +296,11 @@ export const api = {
 
   getAuthMe: () =>
     request<{ authenticated: boolean; user: { id: string; login: string; email?: string; role: string; picture?: string } }>("/auth/me"),
+
+  getGoogleLoginUrl: (returnTo = "/dashboard") => {
+    const safeReturn = returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes(":") ? returnTo : "/dashboard";
+    return `${API_BASE}/auth/google/login?redirect_url=${encodeURIComponent(safeReturn)}`;
+  },
 
   logout: () => {
     authStorage.removeToken();

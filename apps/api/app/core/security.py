@@ -53,12 +53,14 @@ async def get_current_user_or_bypass(
     token = None
     if auth_header and auth_header.credentials:
         token = auth_header.credentials
+    elif request.cookies.get("codeguard_session"):
+        token = request.cookies.get("codeguard_session")
     elif x_dev_token:
         token = x_dev_token
 
-    # 2. Dev auth bypass if no token provided and explicitly enabled in non-production
+    # 2. Dev auth bypass if no token provided, explicitly enabled, and in allowed environment
     if not token:
-        if settings.DEV_AUTH_BYPASS and settings.APP_ENV != "production":
+        if settings.DEV_AUTH_BYPASS and settings.APP_ENV in ("development", "test"):
             role_header = request.headers.get("X-User-Role")
             user_id_header = request.headers.get("X-User-Id")
             return {
@@ -76,17 +78,23 @@ async def get_current_user_or_bypass(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Validate dev token only in non-production environments
-    if token == settings.DEV_AUTH_TOKEN and settings.APP_ENV != "production":
-        role_header = request.headers.get("X-User-Role")
-        user_id_header = request.headers.get("X-User-Id")
-        return {
-            "id": user_id_header or "dev-token-user",
-            "login": "dev-token-user",
-            "email": "dev-token@codeguard.local",
-            "role": role_header.lower() if role_header else "developer",
-            "organization_id": x_org_id,
-        }
+    # Validate dev token only when DEV_AUTH_BYPASS is active in allowed environments
+    if token == settings.DEV_AUTH_TOKEN:
+        if settings.DEV_AUTH_BYPASS and settings.APP_ENV in ("development", "test"):
+            role_header = request.headers.get("X-User-Role")
+            user_id_header = request.headers.get("X-User-Id")
+            return {
+                "id": user_id_header or "dev-token-user",
+                "login": "dev-token-user",
+                "email": "dev-token@codeguard.local",
+                "role": role_header.lower() if role_header else "developer",
+                "organization_id": x_org_id,
+            }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Development token is disabled or forbidden in this environment",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     # If an actual JWT is supplied, decode it safely
     try:
@@ -97,13 +105,15 @@ async def get_current_user_or_bypass(
             algorithms=["HS256"],
             options={"require": ["exp", "sub"]},
         )
+        jwt_org = payload.get("organization_id") or payload.get("org_id")
+        effective_org = jwt_org if jwt_org else (x_org_id if settings.APP_ENV != "production" else None)
         return {
             "id": payload.get("sub"),
             "login": payload.get("name") or payload.get("login", "unknown"),
             "email": payload.get("email"),
             "role": payload.get("role", "user"),
             "picture": payload.get("picture"),
-            "organization_id": payload.get("organization_id") or payload.get("org_id") or x_org_id,
+            "organization_id": effective_org,
         }
     except Exception as e:
         raise HTTPException(
@@ -111,3 +121,23 @@ async def get_current_user_or_bypass(
             detail=f"Invalid or expired authentication token: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
+
+
+def verify_tenant_access(current_user: dict, target_org_id: str | None) -> None:
+    """
+    Ensure the authenticated principal has authorization to access the target organization's resources.
+
+    Enforcement rules:
+    1. If user has no organization_id (e.g. system worker or unconstrained dev principal), access is permitted.
+    2. If user has an organization_id, target_org_id MUST match. Any mismatch is strictly rejected with 403 Forbidden.
+    """
+    if not target_org_id:
+        return
+    user_org_id = current_user.get("organization_id")
+    if not user_org_id:
+        return
+    if str(user_org_id) != str(target_org_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cross-tenant access forbidden",
+        )

@@ -26,6 +26,7 @@ from code_intelligence.source.provider import (
 )
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import EntityNotFoundError
 from app.core.logging import logger
 from app.db.repositories.code_symbol_repo import CodeSymbolRepository
@@ -111,9 +112,12 @@ class CodeIntelligenceService:
             # Determine provider if not explicitly passed
             provider = source_provider
             if not provider:
-                # Check if repository has local directory fixture or clone
-                fixture_path = os.path.abspath(os.path.join(os.getcwd(), "fixtures", "python_repo"))
-                if os.path.exists(fixture_path):
+                is_fixture = (
+                    settings.APP_ENV in ("development", "test")
+                    and (repo.owner == "fixtures" or repo.name in ("python_repo", "javascript_repo", "typescript_repo"))
+                )
+                fixture_path = os.path.abspath(os.path.join(os.getcwd(), "fixtures", repo.name))
+                if is_fixture and os.path.isdir(fixture_path):
                     provider = LocalDiskRepositorySourceProvider(fixture_path)
                 else:
                     provider = MemoryRepositorySourceProvider()

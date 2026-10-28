@@ -2,6 +2,7 @@
 
 import json
 import os
+from collections.abc import Callable
 from datetime import UTC
 from typing import Any
 
@@ -29,6 +30,7 @@ from app.github.client import GitHubClient
 from app.models.review_artifact import ArtifactType
 from app.models.review_job import ReviewJob, ReviewJobStatus
 from app.services.code_intelligence_service import CodeIntelligenceService
+from app.services.ephemeral_workspace import EphemeralWorkspace
 
 
 class ReviewJobService:
@@ -66,23 +68,63 @@ class ReviewJobService:
             return MockLLMProvider()
         return GeminiProvider()
 
-    def _resolve_source_provider(self, repo_full_name: str, head_sha: str, raw_diff: str) -> RepositorySourceProvider:
-        """Resolve a suitable RepositorySourceProvider for the head commit."""
+    async def _acquire_source_provider(
+        self,
+        repo: Any,
+        head_sha: str,
+        installation_id: int,
+        raw_diff: str,
+    ) -> tuple[RepositorySourceProvider, Callable[[], None] | None]:
+        """
+        Acquire repository source code at exact head commit for AST analysis and code intelligence.
+
+        Guarantees:
+        - Real GitHub pull requests fetch repository source from GitHub App into an ephemeral workspace.
+        - Ephemeral workspace is cleaned up on both success and failure.
+        - Never falls back silently to fixtures for real repositories.
+        - Keeps local fixtures strictly for explicit test and dev scenarios (e.g. repo name is python_repo).
+        """
+        # 1. Explicitly injected provider (e.g., unit test mock or pre-configured provider)
         if self.source_provider:
-            return self.source_provider
+            return self.source_provider, None
 
-        # Check for local directory matches (e.g. fixtures/python_repo or project directory)
-        candidate_dirs = [
-            os.path.abspath(os.path.join(os.getcwd(), "fixtures", "python_repo")),
-            os.path.abspath(os.path.join(os.getcwd(), "fixtures", "javascript_repo")),
-            os.path.abspath(os.path.join(os.getcwd(), "fixtures", "typescript_repo")),
-        ]
-        for c_dir in candidate_dirs:
-            if os.path.isdir(c_dir):
-                return LocalDiskRepositorySourceProvider(c_dir)
+        # 2. Explicit local fixture scenario (ONLY in non-production, and ONLY if repo is explicitly a fixture)
+        if settings.APP_ENV in ("development", "test"):
+            is_fixture_repo = (
+                repo.owner == "fixtures"
+                or repo.name in ("python_repo", "javascript_repo", "typescript_repo")
+            )
+            if is_fixture_repo:
+                fixture_candidate = os.path.abspath(os.path.join(os.getcwd(), "fixtures", repo.name))
+                if os.path.isdir(fixture_candidate):
+                    logger.info(f"Using explicit local test fixture repository for {repo.full_name}: {fixture_candidate}")
+                    return LocalDiskRepositorySourceProvider(fixture_candidate), None
 
-        # Fallback to MemoryRepositorySourceProvider with stub files extracted from diff
-        return MemoryRepositorySourceProvider()
+        # 3. Real repository source retrieval from GitHub into ephemeral workspace
+        workspace = EphemeralWorkspace(prefix=f"codeguard_{repo.name}_")
+        try:
+            logger.info(f"Acquiring repository source archive from GitHub for {repo.full_name}@{head_sha}")
+            tarball_bytes = await self.github.download_repository_archive(
+                owner=repo.owner,
+                repo=repo.name,
+                ref=head_sha,
+                installation_id=installation_id,
+            )
+            extracted_dir = workspace.extract_tarball(tarball_bytes)
+            provider = LocalDiskRepositorySourceProvider(extracted_dir)
+            logger.info(f"Successfully extracted {repo.full_name}@{head_sha} into ephemeral workspace {extracted_dir}")
+            return provider, workspace.cleanup
+
+        except Exception as exc:
+            workspace.cleanup()
+            logger.error(
+                f"Failed to acquire repository source archive for {repo.full_name} at commit {head_sha}: {exc}"
+            )
+            # Never proceed with missing or inaccessible repository source
+            raise GitHubAPIError(
+                f"Failed to acquire repository source archive for {repo.full_name} at commit {head_sha}: {exc}",
+                status_code=502,
+            ) from exc
 
     async def execute_job(self, job_id: str) -> ReviewJob:
         """
@@ -122,6 +164,7 @@ class ReviewJobService:
             extra={"event": "review_job_started", "extra_fields": {"job_id": job_id}},
         )
 
+        cleanup_source: Callable[[], None] | None = None
         try:
             with TimingLogger("review_job_execution", {"job_id": job_id}):
                 pr = self.pr_repo.get_by_id(job.pull_request_id)
@@ -189,7 +232,12 @@ class ReviewJobService:
                 )
 
                 # 5. Acquire repository source provider for head commit
-                source_provider = self._resolve_source_provider(repo.full_name, pr.head_sha, raw_diff)
+                source_provider, cleanup_source = await self._acquire_source_provider(
+                    repo=repo,
+                    head_sha=pr.head_sha,
+                    installation_id=installation_id,
+                    raw_diff=raw_diff,
+                )
 
                 # Index repository if not indexed yet
                 _repo_index = self.ci_service.trigger_indexing(
@@ -611,6 +659,14 @@ class ReviewJobService:
             if isinstance(exc, GitHubAPIError) and exc.retryable:
                 raise
             return failed_job if failed_job is not None else job
+        finally:
+            if cleanup_source:
+                try:
+                    cleanup_source()
+                except Exception as clean_err:
+                    logger.warning(
+                        f"Failed to cleanup ephemeral workspace for {job_id}: {clean_err}"
+                    )
 
     async def rerun_job(self, job_id: str) -> ReviewJob:
         """Reset and re-execute a review job without deleting historical artifacts."""

@@ -33,13 +33,22 @@ class PullRequestRepository(BaseRepository[PullRequest]):
         page_size: int = 20,
         repository_id: str | None = None,
         state: str | None = None,
+        organization_id: str | None = None,
     ) -> tuple[list[PullRequest], int]:
-        """List PRs filtered by repository or state."""
+        """List PRs filtered by repository, state, or organization."""
         filters = []
         if repository_id:
             filters.append(PullRequest.repository_id == repository_id)
         if state:
             filters.append(PullRequest.state == state)
+        if organization_id:
+            from app.models.repository import Repository
+
+            filters.append(
+                PullRequest.repository_id.in_(
+                    select(Repository.id).where(Repository.organization_id == organization_id)
+                )
+            )
         return self.get_all(
             page=page,
             page_size=page_size,

@@ -192,6 +192,24 @@ class GitHubClient:
                 ],
             )
 
+        if "tarball" in path:
+            import io
+            import tarfile
+
+            buf = io.BytesIO()
+            with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+                mock_code = (
+                    b"export function hello(): string {\n"
+                    b"  // Production greeting\n"
+                    b"  return 'hello world';\n"
+                    b"}\n"
+                )
+                ti = tarfile.TarInfo(name="repo-archive/src/index.ts")
+                ti.size = len(mock_code)
+                ti.mtime = 1700000000
+                tar.addfile(ti, io.BytesIO(mock_code))
+            return httpx.Response(200, content=buf.getvalue())
+
         if "contents/" in path:
             mock_code = (
                 "export function hello(): string {\n"
@@ -357,6 +375,64 @@ class GitHubClient:
             return response.content
         except GitHubNotFoundError:
             return None
+
+    async def download_repository_archive(
+        self,
+        owner: str,
+        repo: str,
+        ref: str,
+        installation_id: int | None = None,
+        max_size_bytes: int = 50 * 1024 * 1024,
+    ) -> bytes:
+        """
+        Download repository tarball (.tar.gz) from GitHub at exact commit ref.
+        Enforces maximum archive size to prevent resource exhaustion.
+        """
+        path = f"/repos/{owner}/{repo}/tarball/{ref}"
+        inst_id = installation_id or 1
+
+        # Dev/test mock handling
+        if not self.auth.private_key and settings.APP_ENV in ("development", "test"):
+            res = self._build_mock_response("GET", path, "application/x-gzip")
+            return res.content
+
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        headers = await self._get_auth_headers(inst_id, accept="application/vnd.github+json")
+
+        with TimingLogger("github_download_repository_archive", {"owner": owner, "repo": repo, "ref": ref}):
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+                async with client.stream("GET", url, headers=headers) as response:
+                    if response.status_code == 404:
+                        raise GitHubNotFoundError(f"Repository archive for {owner}/{repo} at {ref} not found")
+                    if response.status_code in (403, 429) and "rate limit" in response.text.lower():
+                        retry_after = int(response.headers.get("Retry-After", 60))
+                        raise GitHubRateLimitError(retry_after=retry_after)
+                    if response.status_code >= 400:
+                        content = await response.aread()
+                        raise GitHubAPIError(
+                            f"GitHub archive download failed with status {response.status_code}: {content.decode('utf-8', errors='replace')}",
+                            status_code=response.status_code,
+                        )
+
+                    content_length = response.headers.get("Content-Length")
+                    if content_length and int(content_length) > max_size_bytes:
+                        raise GitHubAPIError(
+                            f"Repository archive exceeds maximum allowed size of {max_size_bytes} bytes",
+                            status_code=413,
+                        )
+
+                    chunks = []
+                    total_bytes = 0
+                    async for chunk in response.aiter_bytes():
+                        total_bytes += len(chunk)
+                        if total_bytes > max_size_bytes:
+                            raise GitHubAPIError(
+                                f"Repository archive download exceeded maximum allowed size of {max_size_bytes} bytes",
+                                status_code=413,
+                            )
+                        chunks.append(chunk)
+
+                    return b"".join(chunks)
 
     async def get_commit(
         self,

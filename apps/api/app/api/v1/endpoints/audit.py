@@ -2,12 +2,13 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.session import get_db
+from app.models.repository import Repository
 from app.models.tool_audit import ToolExecutionAudit
 
 router = APIRouter(tags=["audit"])
@@ -29,11 +30,25 @@ def list_audit_events(
 
     from sqlalchemy import func
 
+    user_org_id = _user.get("organization_id")
+    effective_org_id = organization_id
+    if user_org_id:
+        verify_tenant_access(_user, organization_id)
+        effective_org_id = user_org_id
+
+    if repository_id and effective_org_id:
+        repo = db.scalar(select(Repository).where(Repository.id == repository_id))
+        if repo and repo.organization_id != effective_org_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cross-tenant access forbidden",
+            )
+
     query = select(ToolExecutionAudit).order_by(ToolExecutionAudit.created_at.desc())
     count_query = select(func.count(ToolExecutionAudit.id))
-    if organization_id:
-        query = query.where(ToolExecutionAudit.organization_id == organization_id)
-        count_query = count_query.where(ToolExecutionAudit.organization_id == organization_id)
+    if effective_org_id:
+        query = query.where(ToolExecutionAudit.organization_id == effective_org_id)
+        count_query = count_query.where(ToolExecutionAudit.organization_id == effective_org_id)
     if repository_id:
         query = query.where(ToolExecutionAudit.repository_id == repository_id)
         count_query = count_query.where(ToolExecutionAudit.repository_id == repository_id)

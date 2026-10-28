@@ -30,12 +30,12 @@ def test_google_login_redirect(client: TestClient):
 
 
 def test_google_callback_with_error(client: TestClient):
-    """GET /api/v1/auth/google/callback with error param should redirect to frontend with error."""
+    """GET /api/v1/auth/google/callback with error param should redirect to login page with error."""
     response = client.get("/api/v1/auth/google/callback?error=access_denied", follow_redirects=False)
 
     assert response.status_code == 302
     redirect_url = response.headers["location"]
-    assert f"{settings.FRONTEND_URL}/dashboard?auth_error=access_denied" in redirect_url
+    assert f"{settings.FRONTEND_URL}/login?auth_error=access_denied" in redirect_url
 
 
 def test_google_callback_missing_code(client: TestClient):

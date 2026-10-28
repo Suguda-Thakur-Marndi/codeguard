@@ -35,8 +35,7 @@ def get_job_publication(
         return {"publication": None}
 
     user_org_id = _user.get("organization_id")
-    user_role = str(_user.get("role", "MEMBER")).upper()
-    if user_org_id and user_role != "ADMIN":
+    if user_org_id:
         from app.models.repository import Repository
 
         repo = db.scalar(select(Repository).where(Repository.id == pub.repository_id))
@@ -82,8 +81,7 @@ def publish_job_review(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
     user_org_id = _user.get("organization_id")
-    user_role = str(_user.get("role", "MEMBER")).upper()
-    if user_org_id and user_role != "ADMIN":
+    if user_org_id:
         from app.models.pull_request import PullRequest
         from app.models.repository import Repository
         from app.models.review_job import ReviewJob
@@ -144,8 +142,7 @@ def request_job_approval(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
     user_org_id = _user.get("organization_id")
-    user_role = str(_user.get("role", "MEMBER")).upper()
-    if user_org_id and user_role != "ADMIN":
+    if user_org_id:
         from app.models.pull_request import PullRequest
         from app.models.repository import Repository
         from app.models.review_job import ReviewJob

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.session import get_db
 from app.services.policy_service import PolicyService
 
@@ -29,6 +29,7 @@ def get_organization_policies(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
+    verify_tenant_access(_user, organization_id)
     service = PolicyService(db)
     policy = service.get_or_create_policy(organization_id)
     return {
@@ -55,6 +56,7 @@ def update_organization_policies(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
+    verify_tenant_access(_user, organization_id)
     service = PolicyService(db)
     user_role = str(_user.get("role", "MEMBER")).upper()
     if _user.get("is_dev") or user_role == "ADMIN":

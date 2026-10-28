@@ -5,8 +5,9 @@ import math
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.repositories.pull_request_repo import PullRequestRepository
+from app.db.repositories.repository_repo import RepositoryRepository
 from app.db.repositories.review_job_repo import ReviewJobRepository
 from app.db.session import get_db
 from app.schemas.common import PaginatedResponse
@@ -25,10 +26,21 @@ def list_pull_requests(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> PaginatedResponse[PullRequestRead]:
-    """List pull requests with pagination and optional filters."""
+    """List pull requests with pagination, state filters, and tenant isolation."""
+    user_org_id = _user.get("organization_id")
+
+    if repository_id and user_org_id:
+        target_repo = RepositoryRepository(db).get_by_id(repository_id)
+        if target_repo:
+            verify_tenant_access(_user, target_repo.organization_id)
+
     repo = PullRequestRepository(db)
     items, total = repo.list_pull_requests(
-        page=page, page_size=page_size, repository_id=repository_id, state=state
+        page=page,
+        page_size=page_size,
+        repository_id=repository_id,
+        state=state,
+        organization_id=user_org_id,
     )
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
@@ -55,6 +67,7 @@ def get_pull_request(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pull request with ID '{pull_request_id}' not found",
         )
+    verify_tenant_access(_user, pr.repository.organization_id)
 
     # Attach latest review status if any jobs exist
     latest_review_status = None
@@ -82,6 +95,7 @@ def get_pull_request_reviews(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pull request with ID '{pull_request_id}' not found",
         )
+    verify_tenant_access(_user, pr.repository.organization_id)
 
     job_repo = ReviewJobRepository(db)
     items, total = job_repo.list_by_pull_request(

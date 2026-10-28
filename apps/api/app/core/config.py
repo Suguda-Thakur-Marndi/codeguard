@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     APPROVAL_EXPIRY_MINUTES_DEFAULT: int = 60
 
     # Security & Auth
-    DEV_AUTH_BYPASS: bool = True
+    DEV_AUTH_BYPASS: bool = False
     DEV_AUTH_TOKEN: str = "codeguard-dev-token"
     SECRET_KEY: str = "insecure-dev-secret-key-change-in-production-32bytes"
     CORS_ORIGINS: list[str] = [
@@ -195,6 +195,17 @@ class Settings(BaseSettings):
             self.GITHUB_CLIENT_ID = self.GITHUB_APP_CLIENT_ID
         elif self.GITHUB_CLIENT_ID and not self.GITHUB_APP_CLIENT_ID and self.GITHUB_CLIENT_ID != "dev-client-id":
             self.GITHUB_APP_CLIENT_ID = self.GITHUB_CLIENT_ID
+
+        # 3. Environment validation & fail-closed security invariants
+        if self.DEV_AUTH_BYPASS and self.APP_ENV not in ("development", "test"):
+            raise ValueError(
+                f"DEV_AUTH_BYPASS cannot be True in '{self.APP_ENV}' environment. "
+                "Development authentication bypass is strictly forbidden outside development and test environments."
+            )
+
+        if self.APP_ENV == "staging":
+            if self.DEV_AUTH_BYPASS:
+                raise ValueError("DEV_AUTH_BYPASS cannot be True in staging.")
 
         if self.APP_ENV == "production":
             errors = []

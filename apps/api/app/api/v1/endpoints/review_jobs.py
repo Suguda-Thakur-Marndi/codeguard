@@ -3,12 +3,13 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user_or_bypass
+from app.core.security import get_current_user_or_bypass, verify_tenant_access
 from app.db.repositories.review_artifact_repo import ReviewArtifactRepository
 from app.db.repositories.review_finding_repo import ReviewFindingRepository
 from app.db.repositories.review_job_repo import ReviewJobRepository
 from app.db.session import get_db
 from app.models.review_artifact import ArtifactType
+from app.models.review_job import ReviewJob
 from app.schemas.code_intelligence import (
     ASTChunkSchema,
     ChangedLineIndexSchema,
@@ -32,13 +33,8 @@ from app.services.review_job_service import ReviewJobService
 router = APIRouter(prefix="/review-jobs", tags=["Review Jobs"])
 
 
-@router.get("/{job_id}", response_model=ReviewJobRead)
-def get_review_job(
-    job_id: str,
-    db: Session = Depends(get_db),
-    _user: dict = Depends(get_current_user_or_bypass),
-) -> ReviewJobRead:
-    """Retrieve review job details and status."""
+def _get_verified_job(job_id: str, db: Session, user: dict) -> ReviewJob:
+    """Retrieve review job and enforce tenant authorization."""
     repo = ReviewJobRepository(db)
     job = repo.get_by_id(job_id)
     if not job:
@@ -46,6 +42,18 @@ def get_review_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Review job with ID '{job_id}' not found",
         )
+    verify_tenant_access(user, job.pull_request.repository.organization_id)
+    return job
+
+
+@router.get("/{job_id}", response_model=ReviewJobRead)
+def get_review_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user_or_bypass),
+) -> ReviewJobRead:
+    """Retrieve review job details and status with tenant isolation."""
+    job = _get_verified_job(job_id, db, _user)
     return ReviewJobRead.model_validate(job)
 
 
@@ -56,14 +64,7 @@ def get_review_job_artifacts(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[ReviewArtifactRead]:
     """Retrieve all artifacts (PR_METADATA, DIFF) generated for a review job."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
-
+    _get_verified_job(job_id, db, _user)
     artifact_repo = ReviewArtifactRepository(db)
     artifacts = artifact_repo.list_by_review_job(job_id)
     return [ReviewArtifactRead.model_validate(a) for a in artifacts]
@@ -76,6 +77,7 @@ def get_review_job_diff(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[DiffFileSchema]:
     """Retrieve parsed unified diff files and hunks for a review job."""
+    _get_verified_job(job_id, db, _user)
     artifact_repo = ReviewArtifactRepository(db)
     artifact = artifact_repo.get_by_job_and_type(job_id, ArtifactType.PARSED_DIFF)
     if not artifact:
@@ -94,6 +96,7 @@ def get_review_job_chunks(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[ASTChunkSchema]:
     """Retrieve AST semantic chunks covering changed lines for a review job."""
+    _get_verified_job(job_id, db, _user)
     artifact_repo = ReviewArtifactRepository(db)
     artifact = artifact_repo.get_by_job_and_type(job_id, ArtifactType.AST_CHUNKS)
     if not artifact:
@@ -112,6 +115,7 @@ def get_review_job_changed_lines(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> ChangedLineIndexSchema:
     """Retrieve deterministic changed line index (LEFT vs RIGHT) for a review job."""
+    _get_verified_job(job_id, db, _user)
     artifact_repo = ReviewArtifactRepository(db)
     artifact = artifact_repo.get_by_job_and_type(job_id, ArtifactType.CHANGED_LINE_INDEX)
     if not artifact:
@@ -133,13 +137,7 @@ def get_review_job_agents(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[AgentRunRead]:
     """Retrieve execution records for all specialist agents run on this job."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     runs = finding_repo.list_agent_runs(job_id)
     return [AgentRunRead.model_validate(r) for r in runs]
@@ -155,13 +153,7 @@ def get_review_job_findings(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[ReviewFindingRead]:
     """Retrieve candidate and validated code review findings."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     findings = finding_repo.list_findings(
         review_job_id=job_id,
@@ -180,6 +172,7 @@ def get_review_job_finding(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> ReviewFindingRead:
     """Retrieve a specific finding by ID with full grounding evidence."""
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     finding = finding_repo.get_finding(finding_id)
     if not finding or finding.review_job_id != job_id:
@@ -197,13 +190,7 @@ def get_review_job_trace(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[AgentTraceRead]:
     """Retrieve operational execution traces and latency metrics for all graph nodes."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     traces = finding_repo.list_agent_traces(job_id)
     return [AgentTraceRead.model_validate(t) for t in traces]
@@ -216,13 +203,7 @@ def get_review_job_usage(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> ReviewUsageRead:
     """Retrieve aggregated token usage, cost accounting, and latency breakdown."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     summary = finding_repo.get_job_usage_summary(job_id)
     return ReviewUsageRead.model_validate(summary)
@@ -235,13 +216,7 @@ async def rerun_review_job(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> ReviewJobRead:
     """Trigger a re-execution of the review job without deleting historical artifacts."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     service = ReviewJobService(db)
     updated_job = await service.rerun_job(job_id)
     return ReviewJobRead.model_validate(updated_job)
@@ -257,13 +232,7 @@ def get_review_job_verification_summary(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> VerificationSummaryRead:
     """Retrieve high-level verification summary (candidate, verified, rejected counts)."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     summary = finding_repo.get_job_verification_summary(job_id)
     return VerificationSummaryRead.model_validate(summary)
@@ -276,13 +245,7 @@ def get_review_job_judge_runs(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[JudgeRunRead]:
     """Retrieve all Adversarial Judge runs and decisions for this review job."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
     finding_repo = ReviewFindingRepository(db)
     runs = finding_repo.list_judge_runs(job_id)
     return [JudgeRunRead.model_validate(r) for r in runs]
@@ -295,13 +258,10 @@ def get_review_job_validation_scenarios(
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> list[ValidationScenarioRead]:
     """Retrieve all validation scenarios (sandbox and static) and results for this review job."""
-    job_repo = ReviewJobRepository(db)
-    job = job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review job with ID '{job_id}' not found",
-        )
+    _get_verified_job(job_id, db, _user)
+    finding_repo = ReviewFindingRepository(db)
+    scenarios = finding_repo.list_validation_scenarios_for_job(job_id)
+    return [ValidationScenarioRead.model_validate(s) for s in scenarios]
     finding_repo = ReviewFindingRepository(db)
     scenarios = finding_repo.list_validation_scenarios_for_job(job_id)
     return [ValidationScenarioRead.model_validate(s) for s in scenarios]
