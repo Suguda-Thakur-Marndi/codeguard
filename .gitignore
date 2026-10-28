@@ -21,6 +21,8 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 *.tsbuildinfo
 
 # Generated UI / Design artifacts
@@ -47,8 +49,7 @@ credentials*.json
 *.pem
 *.p8
 
-
-# Databases, Backups & Cache
+# Databases, Backups, Testing & Cache
 *.db
 *.sqlite
 *.sqlite3
@@ -58,7 +59,16 @@ backups/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.log
+*.bak
+*.swp
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
