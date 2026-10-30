@@ -1,4 +1,4 @@
-# CodeGuard AI — Final Security Acceptance Matrix (SECURITY_ACCEPTANCE_MATRIX.md)
+# CodeGuard — Final Security Acceptance Matrix (SECURITY_ACCEPTANCE_MATRIX.md)
 
 This matrix records the adversarial test outcomes, expected behaviors, actual results, status, and empirical evidence for all security dimensions evaluated during Phase 15.
 

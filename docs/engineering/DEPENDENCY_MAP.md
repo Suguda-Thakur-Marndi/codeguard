@@ -1,4 +1,4 @@
-# CodeGuard AI — Dependency Inventory & Ecosystem Map
+# CodeGuard — Dependency Inventory & Ecosystem Map
 
 **Document Status**: Active / Authoritative  
 **Date**: September 17, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Monorepo Dependency Overview
 
-CodeGuard AI strictly segregates dependencies across specialized micro-packages and application services:
+CodeGuard strictly segregates dependencies across specialized micro-packages and application services:
 1. `apps/api`: Production backend, API endpoints, LangGraph orchestrator, database ORM, and Celery workers.
 2. `packages/code-intelligence`: Core AST parsers, unified diff indexers, and dependency graph engines.
 3. `apps/web`: Next.js 15 App Router web client.

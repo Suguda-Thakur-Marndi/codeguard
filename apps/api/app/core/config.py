@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     # Environment & Logging
-    APP_NAME: str = "CodeGuard AI"
+    APP_NAME: str = "CodeGuard"
     APP_ENV: Literal["development", "staging", "production", "test"] = "development"
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     DEBUG: bool = False

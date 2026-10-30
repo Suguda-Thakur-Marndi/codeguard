@@ -1,4 +1,4 @@
-# CodeGuard AI — Production Readiness Matrix
+# CodeGuard — Production Readiness Matrix
 
 This matrix evaluates every production readiness gate against concrete, empirical evidence gathered during Phase 16 testing.
 

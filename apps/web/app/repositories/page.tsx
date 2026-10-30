@@ -102,7 +102,7 @@ function RepositoriesContent() {
 
   async function handleDisconnect(repo: Repository) {
     const confirmed = window.confirm(
-      `Disconnect repository '${repo.full_name}' from CodeGuard AI?\n\nThis will remove review history in CodeGuard while preserving your GitHub App installation on GitHub.`
+      `Disconnect repository '${repo.full_name}' from CodeGuard?\n\nThis will remove review history in CodeGuard while preserving your GitHub App installation on GitHub.`
     );
     if (!confirmed) return;
 
@@ -203,7 +203,7 @@ function RepositoriesContent() {
               Connect GitHub Repositories
             </h1>
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-              CodeGuard AI operates via an official GitHub App with fine-grained read/write permissions for autonomous
+              CodeGuard operates via an official GitHub App with fine-grained read/write permissions for autonomous
               code review, telemetry scanning, and line-level policy enforcement.
             </p>
           </div>
@@ -526,7 +526,7 @@ function RepositoriesContent() {
                         <span className="material-symbols-outlined text-[32px] text-outline">source_environment</span>
                         <p className="text-on-surface font-medium">No connected repositories yet</p>
                         <p className="text-outline text-xs">
-                          Install the CodeGuard AI GitHub App or connect an accessible repository to begin.
+                          Install the CodeGuard GitHub App or connect an accessible repository to begin.
                         </p>
                         <button
                           type="button"

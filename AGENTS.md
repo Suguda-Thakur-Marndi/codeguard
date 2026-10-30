@@ -1,4 +1,4 @@
-# CodeGuard AI — Multi-Agent Engineering Architecture & Guidelines (AGENTS.md)
+# CodeGuard — Multi-Agent Engineering Architecture & Guidelines (AGENTS.md)
 
 This repository enforces a structured, specialized multi-agent engineering workflow designed for development and maintenance.
 
@@ -93,7 +93,7 @@ When interacting with external libraries or SDKs:
 
 1. **Verify Installed Version**: Inspect `pyproject.toml` or `package.json` first. Never assume latest version APIs.
 2. **Retrieve Official Docs**: Fetch exact version documentation via Context7.
-3. **Hierarchy Rule**: If library documentation contradicts CodeGuard AI's architecture or security policy, **the project architecture wins**.
+3. **Hierarchy Rule**: If library documentation contradicts CodeGuard's architecture or security policy, **the project architecture wins**.
 4. **No Spontaneous Upgrades**: Do not upgrade dependencies unless explicitly tasked.
 
 ---

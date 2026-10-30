@@ -198,7 +198,7 @@ class Context7Bridge:
                 "topic": topic or "General API Reference",
                 "signature": f"{library} Standard API",
                 "deprecated": [],
-                "recommended": ["Adhere to existing CodeGuard AI patterns"],
+                "recommended": ["Adhere to existing CodeGuard patterns"],
             },
         )
 
@@ -251,7 +251,7 @@ class Context7Bridge:
 
         has_conflict = len(conflicts) > 0
         resolution = (
-            "Reject external documentation suggestion. Maintain CodeGuard AI project architecture and security invariants."
+            "Reject external documentation suggestion. Maintain CodeGuard project architecture and security invariants."
             if has_conflict
             else "Compliant with project hierarchy."
         )

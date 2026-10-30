@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 help:
-	@echo "CodeGuard AI - Production Release & Developer Commands"
+	@echo "CodeGuard - Production Release & Developer Commands"
 	@echo "  make install            Install backend and frontend dependencies"
 	@echo "  make dev                Start development servers (API & Web)"
 	@echo "  make test               Run backend test suite with pytest"

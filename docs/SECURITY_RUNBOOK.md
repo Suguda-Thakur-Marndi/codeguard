@@ -1,6 +1,6 @@
-# CodeGuard AI — Security Incident & Credential Rotation Runbook
+# CodeGuard — Security Incident & Credential Rotation Runbook
 
-This runbook specifies containment, remediation, and rotation procedures for security incidents affecting CodeGuard AI.
+This runbook specifies containment, remediation, and rotation procedures for security incidents affecting CodeGuard.
 
 ---
 

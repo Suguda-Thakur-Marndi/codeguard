@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-CodeGuard AI — Database Restore Utility
+CodeGuard — Database Restore Utility
 Restores database from a compressed backup archive with SHA-256 verification
 and pre-flight safety gates.
 """
@@ -119,7 +119,7 @@ def verify_restored_db(db_url: str) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="CodeGuard AI Database Restore Utility")
+    parser = argparse.ArgumentParser(description="CodeGuard Database Restore Utility")
     parser.add_argument("--backup-file", required=True, help="Path to the .gz backup archive")
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL", "sqlite:///local_verify_restored.db"))
     parser.add_argument("--confirm-restore", action="store_true", help="Explicit confirmation to overwrite target database")

@@ -1,4 +1,4 @@
-"""Ephemeral workspace management and safe archive extraction for CodeGuard AI."""
+"""Ephemeral workspace management and safe archive extraction for CodeGuard."""
 
 import os
 import shutil

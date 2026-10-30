@@ -50,7 +50,7 @@ def get_install_url(
     db: Session = Depends(get_db),
     _user: dict[str, Any] = Depends(get_current_user_or_bypass),
 ) -> GitHubInstallUrlResponse:
-    """Retrieve the official GitHub App installation URL for CodeGuard AI."""
+    """Retrieve the official GitHub App installation URL for CodeGuard."""
     service = GitHubService(db)
     return service.get_install_url()
 
@@ -120,7 +120,7 @@ async def list_installation_repositories(
     "/repositories/connect",
     response_model=RepositoryRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Connect a GitHub repository to CodeGuard AI",
+    summary="Connect a GitHub repository to CodeGuard",
 )
 async def connect_repository(
     body: GitHubConnectRepositoryRequest,
@@ -147,7 +147,7 @@ async def connect_repository(
 @router.delete(
     "/repositories/{repository_id}",
     response_model=GitHubDisconnectResponse,
-    summary="Disconnect a repository from CodeGuard AI",
+    summary="Disconnect a repository from CodeGuard",
 )
 def disconnect_repository(
     repository_id: str,

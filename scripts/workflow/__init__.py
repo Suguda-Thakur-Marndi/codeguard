@@ -1,4 +1,4 @@
-"""CodeGuard AI — Phase 11: Multi-Agent Engineering Workflow Package.
+"""CodeGuard — Phase 11: Multi-Agent Engineering Workflow Package.
 
 Integrates Agency Agents, Serena Codebase Navigation, and Context7 Documentation.
 """

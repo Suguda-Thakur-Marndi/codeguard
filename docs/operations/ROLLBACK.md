@@ -1,4 +1,4 @@
-# CodeGuard AI — Rollback Procedures & Migration Constraints
+# CodeGuard — Rollback Procedures & Migration Constraints
 
 This document establishes the official rollback procedures for application releases and documents database schema rollback compatibility and limitations.
 
@@ -6,7 +6,7 @@ This document establishes the official rollback procedures for application relea
 
 ## 1. Application Container Rollback Procedure
 
-CodeGuard AI uses immutable, semantic-versioned container images in production. When a newly deployed version (e.g. `v1.1.0`) exhibits unexpected defects, operators execute a rollback to the prior known-good version (`v1.0.0`).
+CodeGuard uses immutable, semantic-versioned container images in production. When a newly deployed version (e.g. `v1.1.0`) exhibits unexpected defects, operators execute a rollback to the prior known-good version (`v1.0.0`).
 
 ### Step-by-Step Container Rollback
 1. **Identify Target Rollback Version**:
@@ -66,7 +66,7 @@ docker compose -f docker-compose.prod.yml run --rm api alembic downgrade -1
 
 ## 3. Zero-Downtime Deployment & the Expand-and-Contract Rule
 
-To maintain zero/low downtime without rollback hazards, all CodeGuard AI schema changes MUST adhere to the **Expand-and-Contract Pattern**:
+To maintain zero/low downtime without rollback hazards, all CodeGuard schema changes MUST adhere to the **Expand-and-Contract Pattern**:
 
 1. **Expand Phase (Release N)**:
    - Add new columns as `NULLABLE` or with safe defaults.

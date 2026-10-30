@@ -17,7 +17,7 @@ This skill guides querying and applying version-safe external library documentat
    - Never use bleeding-edge APIs if the installed version does not support them.
 2. **Hierarchy Rule**:
    - `Project Architecture > Business Logic > Security Policy > Library Docs > Agent Suggestions`.
-   - If official library documentation recommends patterns contrary to CodeGuard AI's security or architecture invariants, project invariants take precedence.
+   - If official library documentation recommends patterns contrary to CodeGuard's security or architecture invariants, project invariants take precedence.
 3. **Verified Ecosystem Packages**:
    - `FastAPI`: Router definitions, dependency injection (`Depends`), response models.
    - `Pydantic`: V2 `BaseModel`, `field_validator`, `model_validator`, `ConfigDict`.

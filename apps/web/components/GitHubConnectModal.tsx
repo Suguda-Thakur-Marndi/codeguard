@@ -103,7 +103,7 @@ export const GitHubConnectModal: React.FC<GitHubConnectModalProps> = ({
         )
       );
 
-      setSuccessMessage(`Connected '${repo.full_name}'. CodeGuard AI is now actively monitoring Pull Requests.`);
+      setSuccessMessage(`Connected '${repo.full_name}'. CodeGuard is now actively monitoring Pull Requests.`);
       onRepositoryConnected(connectedRepo);
     } catch (err: any) {
       setError(err.message || `Failed to connect repository '${repo.full_name}'`);

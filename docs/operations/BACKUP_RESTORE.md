@@ -1,6 +1,6 @@
-# CodeGuard AI — Database Backup & Restore Guide
+# CodeGuard — Database Backup & Restore Guide
 
-This document establishes the official database backup and restoration procedures, format specifications, retention rules, and verified operational drill evidence for CodeGuard AI.
+This document establishes the official database backup and restoration procedures, format specifications, retention rules, and verified operational drill evidence for CodeGuard.
 
 ---
 

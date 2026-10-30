@@ -1,4 +1,4 @@
-# CodeGuard AI — Maintenance Ownership & Responsibility Matrix
+# CodeGuard — Maintenance Ownership & Responsibility Matrix
 
 **Document ID**: `DOC-OPS-OWNER-01`  
 **Application Version**: `1.0.0`  

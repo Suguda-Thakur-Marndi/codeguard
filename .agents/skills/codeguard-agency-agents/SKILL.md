@@ -1,7 +1,7 @@
 ---
 name: codeguard-agency-agents
 description: >-
-  Specialized engineering roles and execution contracts for CodeGuard AI development.
+  Specialized engineering roles and execution contracts for CodeGuard development.
   Covers the 12 domain agents: Architect, Backend, Frontend, Database, Security,
   Policy & Governance, AI/LangGraph, Code Intelligence, Testing, DevOps, Review, and Final Integration.
 ---

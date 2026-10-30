@@ -1,8 +1,8 @@
-# CodeGuard AI — AI Model Change Management & Prompt Governance Policy
+# CodeGuard — AI Model Change Management & Prompt Governance Policy
 
 ## 1. Prime Directive for AI Model Changes
 
-AI models in CodeGuard AI are **untrusted reasoning engines subject to deterministic validation**. Upgrading, changing, or tuning an AI model (e.g. Gemini 1.5 Pro, Gemini 1.5 Flash, or future model generations) must be governed by rigorous empirical evaluation.
+AI models in CodeGuard are **untrusted reasoning engines subject to deterministic validation**. Upgrading, changing, or tuning an AI model (e.g. Gemini 1.5 Pro, Gemini 1.5 Flash, or future model generations) must be governed by rigorous empirical evaluation.
 
 ### Mandatory Rules
 1. **Never Promote Merely Because It Is Newer**: A newer model version will not be deployed without documented benchmark evidence proving non-regression.

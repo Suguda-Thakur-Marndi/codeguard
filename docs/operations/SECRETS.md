@@ -1,12 +1,12 @@
-# CodeGuard AI — Secret Management & Protection Policy
+# CodeGuard — Secret Management & Protection Policy
 
-This document establishes the official Secret Management architecture, scrubbing guarantees, git history audit results, and rotation runbooks for CodeGuard AI.
+This document establishes the official Secret Management architecture, scrubbing guarantees, git history audit results, and rotation runbooks for CodeGuard.
 
 ---
 
 ## 1. Secret Management Architecture
 
-CodeGuard AI adheres to the principle of zero hardcoded secrets:
+CodeGuard adheres to the principle of zero hardcoded secrets:
 
 1. **Storage Mechanisms**:
    - **Production Runtime**: Secrets are injected as environment variables at container instantiation time via secure orchestration key vaults (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, or Kubernetes Secrets).
@@ -82,7 +82,7 @@ In Phase 16, an exhaustive automated regex audit was executed across the entire 
    ```bash
    openssl rand -hex 32
    ```
-2. Update `GITHUB_WEBHOOK_SECRET` in CodeGuard AI production configuration.
+2. Update `GITHUB_WEBHOOK_SECRET` in CodeGuard production configuration.
 3. Restart API service.
 4. Immediately update the **Webhook secret** field in GitHub App settings.
 5. Trigger test webhook and confirm HTTP 202 response in API logs.

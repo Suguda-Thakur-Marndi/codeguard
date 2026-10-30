@@ -123,17 +123,17 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context for startup and shutdown hooks."""
     logger.info(
-        f"Starting CodeGuard AI API [env={settings.APP_ENV}, debug={settings.DEBUG}]",
+        f"Starting CodeGuard API [env={settings.APP_ENV}, debug={settings.DEBUG}]",
         extra={"event": "application_startup"},
     )
     yield
-    logger.info("Shutting down CodeGuard AI API", extra={"event": "application_shutdown"})
+    logger.info("Shutting down CodeGuard API", extra={"event": "application_shutdown"})
 
 
 def create_app() -> FastAPI:
     """FastAPI application factory."""
     app = FastAPI(
-        title="CodeGuard AI API",
+        title="CodeGuard API",
         description="Production-grade agentic GitHub Pull Request review platform API (Phase 1)",
         version=settings.APP_VERSION,
         docs_url="/docs" if settings.APP_ENV != "production" else None,
@@ -212,7 +212,7 @@ def create_app() -> FastAPI:
     @app.get("/", tags=["System"])
     def root() -> dict:
         return {
-            "name": "CodeGuard AI API",
+            "name": "CodeGuard API",
             "version": settings.APP_VERSION,
             "phase": "Phase 1 - Production Foundation",
             "release_phase": "Phase 8 - Production Release",

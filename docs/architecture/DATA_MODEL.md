@@ -1,4 +1,4 @@
-# CodeGuard AI — Relational Data Model & Migration Architecture
+# CodeGuard — Relational Data Model & Migration Architecture
 
 **Document ID**: `DOC-ARCH-DATA-01`  
 **Application Version**: `1.0.0`  
@@ -175,7 +175,7 @@
 
 ## 5. Migration Workflow & Database Management
 
-CodeGuard AI enforces the **Expand-and-Contract Migration Pattern** to allow zero-downtime rolling updates.
+CodeGuard enforces the **Expand-and-Contract Migration Pattern** to allow zero-downtime rolling updates.
 
 ### 5.1 Standard Migration Commands
 ```bash

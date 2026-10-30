@@ -1,4 +1,4 @@
-# CodeGuard AI — Maintainer Onboarding & Knowledge Transfer Checklist
+# CodeGuard — Maintainer Onboarding & Knowledge Transfer Checklist
 
 **Document ID**: `DOC-ONBOARD-01`  
 **Application Version**: `1.0.0`  
@@ -9,7 +9,7 @@
 
 ## 1. Onboarding Mission & Scope
 
-Welcome to the CodeGuard AI engineering team. This document provides an actionable, 12-step onboarding protocol designed to enable a new competent engineer to understand, run, verify, and maintain the system independently.
+Welcome to the CodeGuard engineering team. This document provides an actionable, 12-step onboarding protocol designed to enable a new competent engineer to understand, run, verify, and maintain the system independently.
 
 Every checklist item below is linked to empirical documentation and reproduction commands.
 

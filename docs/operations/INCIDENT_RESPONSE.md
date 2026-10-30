@@ -1,4 +1,4 @@
-# CodeGuard AI — Incident Response & SRE Runbooks
+# CodeGuard — Incident Response & SRE Runbooks
 
 This document provides definitive, step-by-step incident response playbooks for site reliability engineers (SRE) and on-call operators.
 

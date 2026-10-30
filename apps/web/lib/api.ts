@@ -295,7 +295,19 @@ export const api = {
   },
 
   getAuthMe: () =>
-    request<{ authenticated: boolean; user: { id: string; login: string; email?: string; role: string; picture?: string } }>("/auth/me"),
+    request<{
+      authenticated: boolean;
+      user: {
+        id: string;
+        login: string;
+        email?: string;
+        role: string;
+        picture?: string;
+        is_dev?: boolean;
+        organization_id?: string | null;
+        organizations?: string[];
+      };
+    }>("/auth/me"),
 
   getGoogleLoginUrl: (returnTo = "/dashboard") => {
     const safeReturn = returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes(":") ? returnTo : "/dashboard";

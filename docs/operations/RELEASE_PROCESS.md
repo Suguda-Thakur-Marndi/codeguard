@@ -1,12 +1,12 @@
-# CodeGuard AI — Release Engineering & Deployment Process
+# CodeGuard — Release Engineering & Deployment Process
 
-This document defines the official release lifecycle, semantic versioning policy, release gates, and deployment protocols for CodeGuard AI.
+This document defines the official release lifecycle, semantic versioning policy, release gates, and deployment protocols for CodeGuard.
 
 ---
 
 ## 1. Release Strategy & Semantic Versioning
 
-CodeGuard AI follows **Semantic Versioning 2.0.0** (`vMAJOR.MINOR.PATCH`):
+CodeGuard follows **Semantic Versioning 2.0.0** (`vMAJOR.MINOR.PATCH`):
 - **MAJOR**: Breaking API schema changes, fundamental architectural shifts, or backward-incompatible database migrations.
 - **MINOR**: New specialized agents, safe tool integrations, or operational feature enhancements.
 - **PATCH**: Bug fixes, security patches, performance tuning, or documentation updates.
@@ -60,7 +60,7 @@ Before any production release can be approved or deployed, all **27 Release Gate
 [1. Pre-Flight] Run Security & Acceptance Suites
       │
       ▼
-[2. Tag Release] git tag -a v1.0.0-release -m "CodeGuard AI Release v1.0.0"
+[2. Tag Release] git tag -a v1.0.0-release -m "CodeGuard Release v1.0.0"
       │
       ▼
 [3. Build Images] docker compose -f docker-compose.prod.yml build

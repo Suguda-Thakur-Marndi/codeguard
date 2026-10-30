@@ -15,7 +15,7 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class BaseSpecialistAgent:
-    """Base class for all CodeGuard AI review specialist agents."""
+    """Base class for all CodeGuard review specialist agents."""
 
     def __init__(
         self,

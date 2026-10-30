@@ -1,4 +1,4 @@
-# CodeGuard AI — Agent Orchestration, Adversarial Judge & Review Publication Flow
+# CodeGuard — Agent Orchestration, Adversarial Judge & Review Publication Flow
 
 **Document ID**: `DOC-ARCH-AGENT-01`  
 **Application Version**: `1.0.0`  
@@ -75,7 +75,7 @@
 
 ## 2. Code Context Assembly & Tree-Sitter Indexing
 
-CodeGuard AI does not dump raw file text into the LLM prompt. Instead, it utilizes deterministic AST parsing to extract high-precision context:
+CodeGuard does not dump raw file text into the LLM prompt. Instead, it utilizes deterministic AST parsing to extract high-precision context:
 
 1. **Unified Diff Parsing**: Unified diffs are parsed into structured `DiffHunk` objects classifying lines as `LEFT` (base) or `RIGHT` (head).
 2. **Enclosing Entity Resolution**: For every modified line, Tree-sitter resolves the tightest enclosing AST node (e.g. `FunctionDefinition`, `MethodDefinition`, `ClassDefinition`).
@@ -203,7 +203,7 @@ Candidate findings emitted by specialist agents must pass through the **Adversar
 
 ## 5. Zero-Trust Deterministic Policy Engine
 
-CodeGuard AI operates completely without external protocol layers (such as MCP). Instead, deterministic zero-trust security policies are evaluated in-process via `PolicyEngine` (`apps/api/app/core/policy.py`) before any consequential action (such as GitHub PR review publication) can be executed.
+CodeGuard operates completely without external protocol layers (such as MCP). Instead, deterministic zero-trust security policies are evaluated in-process via `PolicyEngine` (`apps/api/app/core/policy.py`) before any consequential action (such as GitHub PR review publication) can be executed.
 
 ### 5.1 Hardcoded Forbidden Operations Blocklist
 The policy engine unconditionally blocks the following 9 dangerous operations, regardless of prompt instructions or user permissions:

@@ -1,8 +1,8 @@
-# CodeGuard AI — Engineering Maintenance Policy
+# CodeGuard — Engineering Maintenance Policy
 
 ## 1. Prime Directive & Maintenance Philosophy
 
-CodeGuard AI is an enterprise-grade agentic code review and security verification platform. As the system matures, the primary objective of maintenance engineering is **system stability, regression prevention, security posture preservation, and deterministic reliability**.
+CodeGuard is an enterprise-grade agentic code review and security verification platform. As the system matures, the primary objective of maintenance engineering is **system stability, regression prevention, security posture preservation, and deterministic reliability**.
 
 Maintenance follows the non-negotiable Engineering Hierarchy established in `AGENTS.md`:
 

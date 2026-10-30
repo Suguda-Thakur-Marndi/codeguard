@@ -1,4 +1,4 @@
-# CodeGuard AI — Research Architecture & Paper Traceability Matrix
+# CodeGuard — Research Architecture & Paper Traceability Matrix
 
 **Document Status**: Active / Authoritative  
 **Date**: September 17, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-This matrix establishes 1:1 ground-truth traceability between the research paper architecture ("CodeGuard AI: Autonomous, Multi-Agent Code Review with Adversarial Verification and Deterministic Governance") and the concrete production code artifacts in this repository.
+This matrix establishes 1:1 ground-truth traceability between the research paper architecture ("CodeGuard: Autonomous, Multi-Agent Code Review with Adversarial Verification and Deterministic Governance") and the concrete production code artifacts in this repository.
 
 No research claim is made without direct backing by verified source code, active tests, and empirical benchmark evidence.
 

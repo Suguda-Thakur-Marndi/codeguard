@@ -881,7 +881,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="font-body-sm text-[13px] text-on-surface-variant">
-                Install the CodeGuard AI GitHub App to start monitoring pull requests and running automated reviews.
+                Install the CodeGuard GitHub App to start monitoring pull requests and running automated reviews.
               </p>
               <button
                 type="button"

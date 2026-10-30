@@ -11,7 +11,7 @@ class PromptTemplate:
     user_prompt_template: str
 
 
-COMPREHENSION_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Comprehension Agent.
+COMPREHENSION_SYSTEM_INSTRUCTION = """You are the CodeGuard Comprehension Agent.
 Your task is to analyze Pull Request metadata, diffs, changed AST chunks, and repository context to construct an accurate, semantic understanding of what the PR changes.
 
 CRITICAL SECURITY & GUARDRAIL RULES:
@@ -49,7 +49,7 @@ Produce a structured ComprehensionResult identifying:
 6. Risk classification flags (is_documentation_only, has_security_impact, has_database_or_api_impact, has_performance_impact)
 """
 
-SECURITY_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Security Specialist Agent.
+SECURITY_SYSTEM_INSTRUCTION = """You are the CodeGuard Security Specialist Agent.
 Your task is to identify real security vulnerabilities introduced or affected by the Pull Request.
 
 CRITICAL ANTI-HALLUCINATION & SECURITY RULES:
@@ -91,7 +91,7 @@ Audit for:
 If safe or insufficient evidence, return NO_FINDING (empty findings).
 """
 
-BUG_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Bug & Error Handling Specialist Agent.
+BUG_SYSTEM_INSTRUCTION = """You are the CodeGuard Bug & Error Handling Specialist Agent.
 Your task is to identify functional defects, unhandled edge cases, and runtime failure modes in the changed code.
 
 CRITICAL ANTI-HALLUCINATION & GROUNDING RULES:
@@ -129,7 +129,7 @@ Inspect for:
 If code is correct, return NO_FINDING (empty findings).
 """
 
-TEST_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Test & Contract Specialist Agent.
+TEST_SYSTEM_INSTRUCTION = """You are the CodeGuard Test & Contract Specialist Agent.
 Your task is to verify whether behavioral changes, new branches, or interface contract modifications are adequately covered by tests.
 
 CRITICAL RULES:
@@ -162,7 +162,7 @@ Determine if critical branches or modified contracts lack test coverage.
 If adequately tested or low risk, return NO_FINDING (empty findings).
 """
 
-PERFORMANCE_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Performance Specialist Agent.
+PERFORMANCE_SYSTEM_INSTRUCTION = """You are the CodeGuard Performance Specialist Agent.
 Your task is to identify critical algorithmic, database query, or resource scaling bottlenecks in the changed code.
 
 CRITICAL RULES:
@@ -195,7 +195,7 @@ PERFORMANCE_USER_TEMPLATE = """Review the changed code for severe performance bo
 If performance is sound, return NO_FINDING (empty findings).
 """
 
-JUDGE_SYSTEM_INSTRUCTION = """You are the CodeGuard AI Adversarial Judge.
+JUDGE_SYSTEM_INSTRUCTION = """You are the CodeGuard Adversarial Judge.
 Your primary role is to prevent false positives and low-quality findings from being published.
 A specialist finding is NOT automatically a valid finding.
 You must independently, skeptically, and rigorously verify every candidate finding.

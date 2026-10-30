@@ -139,3 +139,253 @@ def test_auth_logout_get_rejected(client: TestClient):
     """GET /api/v1/auth/logout must be rejected with 405 Method Not Allowed to eliminate Logout CSRF."""
     response = client.get("/api/v1/auth/logout")
     assert response.status_code == 405
+
+
+def test_google_login_missing_client_id_raises_503(client: TestClient):
+    """GET /api/v1/auth/google/login when GOOGLE_CLIENT_ID is not configured returns 503."""
+    with patch.object(settings, "GOOGLE_CLIENT_ID", ""):
+        response = client.get("/api/v1/auth/google/login", follow_redirects=False)
+        assert response.status_code == 503
+        assert "Google OAuth is not configured" in response.text
+
+
+@pytest.mark.asyncio
+async def test_google_callback_missing_server_credentials_redirects_unconfigured(client: TestClient):
+    """GET /api/v1/auth/google/callback without GOOGLE_CLIENT_SECRET redirects to login with server_oauth_unconfigured."""
+    csrf_token = "csrf-unconfigured-test"
+    now = int(time.time())
+    state_payload = {"csrf": csrf_token, "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    client.cookies.set("oauth_state_csrf", csrf_token)
+    try:
+        with patch.object(settings, "GOOGLE_CLIENT_SECRET", ""):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=mock-code&state={signed_state}",
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "auth_error=server_oauth_unconfigured" in response.headers["location"]
+    finally:
+        client.cookies.clear()
+
+
+def test_auth_me_with_expired_session_fails(client: TestClient):
+    """GET /api/v1/auth/me with an expired session token returns 401 Unauthorized."""
+    past = int(time.time()) - 3600
+    expired_payload = {
+        "iss": "codeguard-ai",
+        "aud": "codeguard-api",
+        "sub": "user-expired-123",
+        "email": "expired@codeguard.ai",
+        "iat": past - 3600,
+        "exp": past,
+    }
+    expired_token = jwt.encode(expired_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {expired_token}"})
+    assert response.status_code == 401
+    assert "Invalid or expired authentication token" in response.text
+
+
+def test_auth_me_with_tampered_cookie_fails(client: TestClient):
+    """GET /api/v1/auth/me with a tampered session cookie returns 401 Unauthorized."""
+    with patch.object(settings, "DEV_AUTH_BYPASS", False):
+        client.cookies.set("codeguard_session", "tampered.jwt.payload")
+        try:
+            response = client.get("/api/v1/auth/me")
+            assert response.status_code == 401
+            assert "Invalid or expired authentication token" in response.text
+        finally:
+            client.cookies.clear()
+
+
+def test_auth_me_with_invalid_issuer_fails(client: TestClient):
+    """GET /api/v1/auth/me with an invalid token issuer returns 401."""
+    now = int(time.time())
+    payload = {
+        "iss": "untrusted-issuer",
+        "aud": "codeguard-api",
+        "sub": "user-bad-issuer",
+        "iat": now,
+        "exp": now + 3600,
+    }
+    bad_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {bad_token}"})
+    assert response.status_code == 401
+    assert "Invalid token issuer" in response.text
+
+
+@pytest.mark.asyncio
+async def test_google_callback_with_active_organization_membership(client: TestClient, db_session):
+    """Callback sets primary organization_id and organizations list when user has active memberships."""
+    from unittest.mock import MagicMock
+
+    from app.models.membership import MembershipRole, MembershipStatus, UserOrganizationMembership
+    from app.models.organization import Organization
+    from app.models.user import User
+
+    # Pre-create organization and user with active membership
+    org = Organization(
+        github_installation_id=12345678,
+        github_account_id=87654321,
+        github_account_login="acme-corp",
+        account_type="Organization",
+    )
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
+
+    user = User(
+        google_sub="google-org-user-sub",
+        email="org-member@acme.com",
+        name="Org Member",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    membership = UserOrganizationMembership(
+        user_id=user.id,
+        organization_id=org.id,
+        role=MembershipRole.MEMBER.value,
+        status=MembershipStatus.ACTIVE.value,
+    )
+    db_session.add(membership)
+    db_session.commit()
+
+    csrf_token = "csrf-org-member-token"
+    now = int(time.time())
+    state_payload = {"csrf": csrf_token, "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "token-org-member"}
+
+    mock_userinfo_resp = MagicMock()
+    mock_userinfo_resp.status_code = 200
+    mock_userinfo_resp.json.return_value = {
+        "sub": "google-org-user-sub",
+        "email": "org-member@acme.com",
+        "name": "Org Member",
+    }
+
+    client.cookies.set("oauth_state_csrf", csrf_token)
+    try:
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
+            "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
+        ):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=valid-code&state={signed_state}",
+                follow_redirects=False,
+            )
+
+        assert response.status_code == 302
+        cookie_header = response.headers.get("set-cookie", "")
+        assert "codeguard_session=" in cookie_header
+
+        # Extract and decode session cookie
+        for cookie_part in cookie_header.split(";"):
+            if "codeguard_session=" in cookie_part:
+                token_val = cookie_part.split("codeguard_session=")[1].strip()
+                decoded = jwt.decode(token_val, settings.SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+                assert decoded["organization_id"] == org.id
+                assert org.id in decoded["organizations"]
+                break
+    finally:
+        client.cookies.clear()
+
+
+@pytest.mark.asyncio
+async def test_google_callback_inactive_user_rejected(client: TestClient, db_session):
+    """Callback rejects inactive user account with account_inactive redirect."""
+    from unittest.mock import MagicMock
+
+    from app.models.user import User
+
+    inactive_user = User(
+        google_sub="inactive-user-sub",
+        email="inactive@example.com",
+        name="Inactive User",
+        is_active=False,
+    )
+    db_session.add(inactive_user)
+    db_session.commit()
+
+    csrf_token = "csrf-inactive-token"
+    now = int(time.time())
+    state_payload = {"csrf": csrf_token, "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "token-inactive"}
+
+    mock_userinfo_resp = MagicMock()
+    mock_userinfo_resp.status_code = 200
+    mock_userinfo_resp.json.return_value = {
+        "sub": "inactive-user-sub",
+        "email": "inactive@example.com",
+        "name": "Inactive User",
+    }
+
+    client.cookies.set("oauth_state_csrf", csrf_token)
+    try:
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
+            "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
+        ):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=valid-code&state={signed_state}",
+                follow_redirects=False,
+            )
+
+        assert response.status_code == 302
+        assert "auth_error=account_inactive" in response.headers["location"]
+    finally:
+        client.cookies.clear()
+
+
+@pytest.mark.asyncio
+async def test_google_callback_secure_cookie_in_production(client: TestClient):
+    """In production environment, session cookie sets Secure flag."""
+    from unittest.mock import MagicMock
+
+    csrf_token = "csrf-prod-cookie"
+    now = int(time.time())
+    state_payload = {"csrf": csrf_token, "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "token-prod"}
+
+    mock_userinfo_resp = MagicMock()
+    mock_userinfo_resp.status_code = 200
+    mock_userinfo_resp.json.return_value = {
+        "sub": "prod-user-sub",
+        "email": "prod.user@codeguard.ai",
+        "name": "Prod User",
+    }
+
+    client.cookies.set("oauth_state_csrf", csrf_token)
+    try:
+        with patch.object(settings, "APP_ENV", "production"), patch(
+            "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp
+        ), patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=valid-code&state={signed_state}",
+                follow_redirects=False,
+            )
+
+        assert response.status_code == 302
+        cookies = response.headers.get("set-cookie", "").lower()
+        assert "codeguard_session=" in cookies
+        assert "secure" in cookies
+        assert "httponly" in cookies
+        assert "samesite=lax" in cookies
+    finally:
+        client.cookies.clear()
+

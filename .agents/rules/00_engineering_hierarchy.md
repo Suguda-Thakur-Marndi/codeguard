@@ -2,7 +2,7 @@
 
 ## Precedence Order
 
-In all engineering, development, refactoring, and maintenance tasks within CodeGuard AI, the following authority hierarchy is absolute and binding:
+In all engineering, development, refactoring, and maintenance tasks within CodeGuard, the following authority hierarchy is absolute and binding:
 
 1. **USER REQUIREMENTS**: Direct objectives and operational constraints provided by the user.
 2. **EXISTING CODEGUARD ARCHITECTURE**: The modular monorepo boundaries, LangGraph review graph, Zero-Trust PolicyEngine Sentinel, and service architecture.
@@ -14,4 +14,4 @@ In all engineering, development, refactoring, and maintenance tasks within CodeG
 
 ## Invariant Enforcement
 
-If external library documentation (Context7) or agent suggestions suggest an approach that conflicts with CodeGuard AI's architecture or security invariants, the **project architecture and security invariants always win**.
+If external library documentation (Context7) or agent suggestions suggest an approach that conflicts with CodeGuard's architecture or security invariants, the **project architecture and security invariants always win**.

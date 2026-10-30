@@ -173,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="font-headline-sm text-[13px] text-on-surface font-semibold truncate leading-tight">
-                  CodeGuard AI
+                  CodeGuard
                 </span>
                 <span className="font-label-mono text-[9px] uppercase tracking-widest text-outline">
                   Autonomous Core
@@ -186,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               href="/dashboard"
               className="w-7 h-7 rounded-md bg-primary-container text-on-primary-container flex items-center justify-center font-label-mono font-bold text-[11px] mx-auto"
               onClick={onClose}
-              aria-label="CodeGuard AI home"
+              aria-label="CodeGuard home"
             >
               CG
             </Link>

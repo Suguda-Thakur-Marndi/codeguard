@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "codeguard-api"
 version = "0.1.0"
-description = "CodeGuard AI - Backend API and Review Job Orchestration"
+description = "CodeGuard - Backend API and Review Job Orchestration"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

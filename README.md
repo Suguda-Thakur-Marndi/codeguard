@@ -1,4 +1,4 @@
-# CodeGuard AI — Agentic GitHub Pull Request Review Platform
+# CodeGuard — Agentic GitHub Pull Request Review Platform
 
 > **Version**: `1.0.0` | **Release Stage**: `Release Candidate 1 (RC1) Qualified` | **Operational Status**: `ACCEPTED (Staging & Local Runtime)`  
 > *Deterministic Tree-sitter AST code intelligence, multi-agent LangGraph review engine, 5-gate adversarial verification judge, zero-trust deterministic policy governance, cryptographic human authorization gates, and direct atomic GitHub publication.*
@@ -12,7 +12,7 @@
 [![SRE Gates](https://img.shields.io/badge/SRE%20Gates-27%2F27%20passed-brightgreen.svg)](#7-running-the-automated-test-suites)
 [![Security Gates](https://img.shields.io/badge/Security%20Gates-23%2F23%20passed-brightgreen.svg)](#7-running-the-automated-test-suites)
 
-CodeGuard AI is an automated, adversarial-resistant GitHub Pull Request code review platform designed to detect security vulnerabilities, logic bugs, contract shifts, and performance bottlenecks with mathematical line precision and zero hallucinations.
+CodeGuard is an automated, adversarial-resistant GitHub Pull Request code review platform designed to detect security vulnerabilities, logic bugs, contract shifts, and performance bottlenecks with mathematical line precision and zero hallucinations.
 
 ---
 
@@ -23,7 +23,7 @@ Traditional automated code review tools suffer from three fundamental problems:
 2. **LLM Hallucinations**: Standard AI review bots hallucinate non-existent line numbers, critique unchanged code outside the diff, or recommend unviable code snippets.
 3. **Prompt Injection & Autonomous Tool Escapes**: Malicious pull requests containing adversarial comments or indirect prompt injections can compromise reviewer bots that lack zero-trust boundaries.
 
-**CodeGuard AI solves these challenges by combining:**
+**CodeGuard solves these challenges by combining:**
 - **Deterministic AST Context Extraction**: Uses Tree-sitter parsers to bound reviews strictly to modified hunks and enclosing functions, constructing a deterministic `ChangedLineIndex`.
 - **5-Gate Adversarial Judge**: A dedicated verification funnel that checks diff boundaries, caller factuality, actionability, severity calibration, and execution sandbox syntax before any finding is admitted.
 - **Zero-Trust Policy Engine**: Hardcoded tool blocklists (`execute_shell`, `eval_code`, `delete_repo`, etc.) and mandatory human operator approval for consequential actions.
@@ -33,7 +33,7 @@ Traditional automated code review tools suffer from three fundamental problems:
 
 ## 2. Implemented vs. Planned / Pilot-Pending Capabilities
 
-To maintain strict scientific and engineering honesty, CodeGuard AI clearly distinguishes between verified production capabilities and planned milestones:
+To maintain strict scientific and engineering honesty, CodeGuard clearly distinguishes between verified production capabilities and planned milestones:
 
 | System Dimension | Capability | Status | Evidence / Verification |
 | :--- | :--- | :---: | :--- |
@@ -178,7 +178,7 @@ Open separate terminal windows with your virtual environment active:
 
 ## 7. Running the Automated Test Suites
 
-CodeGuard AI includes automated unit/integration tests and complete static analysis:
+CodeGuard includes automated unit/integration tests and complete static analysis:
 
 ```bash
 # 1. Run all Backend API Unit & Integration tests

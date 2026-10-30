@@ -2,7 +2,7 @@
 
 ## Core Rule: NO UI/UX REDESIGN
 
-Development agents must NEVER redesign, overhaul, or restyle the user interface of CodeGuard AI (`apps/web/`).
+Development agents must NEVER redesign, overhaul, or restyle the user interface of CodeGuard (`apps/web/`).
 
 ## Specific Prohibitions
 

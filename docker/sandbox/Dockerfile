@@ -1,4 +1,4 @@
-# Hardened, isolated Execution Sandbox for CodeGuard AI
+# Hardened, isolated Execution Sandbox for CodeGuard
 FROM python:3.11-slim
 
 # Security: run as non-root user

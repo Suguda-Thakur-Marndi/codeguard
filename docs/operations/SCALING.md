@@ -1,12 +1,12 @@
-# CodeGuard AI — Horizontal & Vertical Scaling Architecture
+# CodeGuard — Horizontal & Vertical Scaling Architecture
 
-This document defines the scaling model, concurrency controls, database connection pool sizing, and backpressure mechanisms for CodeGuard AI.
+This document defines the scaling model, concurrency controls, database connection pool sizing, and backpressure mechanisms for CodeGuard.
 
 ---
 
 ## 1. Scaling Topology Overview
 
-CodeGuard AI separates synchronous I/O from heavy computational and AI workflows, allowing independent scaling of web, API, and worker nodes:
+CodeGuard separates synchronous I/O from heavy computational and AI workflows, allowing independent scaling of web, API, and worker nodes:
 
 ```
                           [Load Balancer]
@@ -68,7 +68,7 @@ $$\text{Total Connections} = (\text{API Replicas} \times \text{Uvicorn Workers} 
 
 ## 4. Resource Boundaries & Backpressure Protection
 
-To protect the infrastructure and Gemini AI quotas from unbounded resource consumption during massive PRs or denial-of-service attempts, CodeGuard AI enforces hard boundaries:
+To protect the infrastructure and Gemini AI quotas from unbounded resource consumption during massive PRs or denial-of-service attempts, CodeGuard enforces hard boundaries:
 
 | Resource Constraint | Boundary Limit | Enforcement Point | Behavior on Breach |
 |---|---|---|---|

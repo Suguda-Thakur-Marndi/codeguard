@@ -1,4 +1,4 @@
-"""Unit tests for CodeGuard AI Configuration Validation (Phase 16 - Section 5)."""
+"""Unit tests for CodeGuard Configuration Validation (Phase 16 - Section 5)."""
 
 from typing import Any, cast
 
@@ -11,14 +11,14 @@ from app.core.config import Settings
 def test_config_1_all_required_variables_present():
     """Verify default valid configuration initializes without errors."""
     cfg = Settings(
-        APP_NAME="CodeGuard AI",
+        APP_NAME="CodeGuard",
         APP_ENV="development",
         BACKEND_URL="http://localhost:8000",
         FRONTEND_URL="http://localhost:3000",
         DATABASE_URL="postgresql://user:pass@localhost:5432/db",
         REDIS_URL="redis://localhost:6379/0",
     )
-    assert cfg.APP_NAME == "CodeGuard AI"
+    assert cfg.APP_NAME == "CodeGuard"
     assert cfg.BACKEND_URL == "http://localhost:8000"
 
 

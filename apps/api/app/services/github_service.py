@@ -204,7 +204,7 @@ class GitHubService:
         return repo
 
     def disconnect_repository(self, repository_id: str) -> None:
-        """Disconnect a repository from CodeGuard AI while leaving the GitHub App installed on GitHub."""
+        """Disconnect a repository from CodeGuard while leaving the GitHub App installed on GitHub."""
         repo = self.repo_repo.get_by_id(repository_id)
         if not repo:
             raise EntityNotFoundError("Repository", repository_id)

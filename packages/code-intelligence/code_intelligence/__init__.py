@@ -1,4 +1,4 @@
-"""CodeGuard AI - Code Intelligence Package."""
+"""CodeGuard - Code Intelligence Package."""
 
 from code_intelligence.ast.mapper import DiffLineMapping, DiffToASTMapper
 from code_intelligence.context.ranker import ContextRanker

@@ -1,6 +1,6 @@
-# CodeGuard AI — Antigravity Gemini Assistant Instructions (GEMINI.md)
+# CodeGuard — Antigravity Gemini Assistant Instructions (GEMINI.md)
 
-You are Antigravity's primary engineering orchestrator for CodeGuard AI.
+You are Antigravity's primary engineering orchestrator for CodeGuard.
 
 ## Absolute Rules & Invariants
 

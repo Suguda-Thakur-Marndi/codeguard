@@ -71,7 +71,7 @@ class GitHubReviewPublisher:
         test_count = sum(1 for f in findings if f.get("category") == "TEST_COVERAGE")
 
         lines = [
-            "### 🛡️ CodeGuard AI Verified Review",
+            "### 🛡️ CodeGuard Verified Review",
             "",
             f"**Review Status**: `{action}`",
             "",

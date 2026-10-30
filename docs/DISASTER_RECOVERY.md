@@ -1,4 +1,4 @@
-# CodeGuard AI — Disaster Recovery & Backup Plan
+# CodeGuard — Disaster Recovery & Backup Plan
 
 **Document ID**: `DOC-OPS-DR-01`  
 **Application Version**: `1.0.0`  
@@ -14,7 +14,7 @@
 | **RPO (Recovery Point Objective)** | < 1 hour | **VERIFIED (< 1 hr)** | Automated database snapshots every hour with WAL archiving; maximum allowable data loss is 1 hour of review job metadata. |
 | **RTO (Recovery Time Objective)** | < 30 minutes | **VERIFIED (< 5 mins)** | Automated restore script `scripts/restore_db.py` restored and verified 27 relational tables with checksum confirmation in < 2 seconds in test environment. |
 
-*Critical Principle: Source code and pull request diffs are perpetually retained in GitHub; CodeGuard AI stores review analysis, findings, approval records, and tool execution audit logs. Raw source code is never stored exclusively on the platform, eliminating source loss risk during platform outages.*
+*Critical Principle: Source code and pull request diffs are perpetually retained in GitHub; CodeGuard stores review analysis, findings, approval records, and tool execution audit logs. Raw source code is never stored exclusively on the platform, eliminating source loss risk during platform outages.*
 
 ---
 

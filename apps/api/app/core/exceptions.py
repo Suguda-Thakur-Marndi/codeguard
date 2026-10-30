@@ -1,10 +1,10 @@
-"""CodeGuard AI exception hierarchy with retry classification."""
+"""CodeGuard exception hierarchy with retry classification."""
 
 from typing import Any
 
 
 class CodeGuardException(Exception):
-    """Base domain exception for CodeGuard AI."""
+    """Base domain exception for CodeGuard."""
 
     def __init__(
         self,

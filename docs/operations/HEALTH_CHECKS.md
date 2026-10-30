@@ -1,12 +1,12 @@
-# CodeGuard AI — Health Checks & Readiness Probes
+# CodeGuard — Health Checks & Readiness Probes
 
-This document details the health, liveness, and readiness probe architecture implemented across CodeGuard AI services.
+This document details the health, liveness, and readiness probe architecture implemented across CodeGuard services.
 
 ---
 
 ## 1. Architectural Philosophy: Liveness vs. Readiness
 
-CodeGuard AI strictly segregates **Liveness** from **Readiness** to prevent cascading failures:
+CodeGuard strictly segregates **Liveness** from **Readiness** to prevent cascading failures:
 
 - **Liveness Probes (`/live`)**:
   - Confirms solely that the application process is running and its event loop can respond to HTTP requests.
@@ -30,7 +30,7 @@ CodeGuard AI strictly segregates **Liveness** from **Readiness** to prevent casc
   ```json
   {
     "status": "ok",
-    "app": "CodeGuard AI",
+    "app": "CodeGuard",
     "version": "1.0.0",
     "environment": "production",
     "git_revision": "v1.0.0-release"

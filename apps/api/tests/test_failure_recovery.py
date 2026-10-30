@@ -1,4 +1,4 @@
-"""Failure and Recovery tests for CodeGuard AI.
+"""Failure and Recovery tests for CodeGuard.
 
 Verifies:
 - Gemini API error and timeout recovery

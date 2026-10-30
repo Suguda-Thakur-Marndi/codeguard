@@ -15,7 +15,7 @@ from scripts.workflow.serena_bridge import SerenaNavigator
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="codeguard-workflow",
-        description="CodeGuard AI Phase 11 — Multi-Agent Engineering Workflow CLI",
+        description="CodeGuard Phase 11 — Multi-Agent Engineering Workflow CLI",
     )
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
@@ -88,7 +88,7 @@ def main() -> None:
             print(f"  - {d}")
 
     elif args.command == "roles":
-        print("\nCodeGuard AI — 12 Specialized Agency Agent Roles:")
+        print("\nCodeGuard — 12 Specialized Agency Agent Roles:")
         for role, defn in ROLE_REGISTRY.items():
             print(f"\n• {role.value}:")
             print(f"  Description: {defn.description}")

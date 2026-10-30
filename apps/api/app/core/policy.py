@@ -1,4 +1,4 @@
-"""Deterministic Tool & Operation Authorization Policy Engine for CodeGuard AI."""
+"""Deterministic Tool & Operation Authorization Policy Engine for CodeGuard."""
 
 import enum
 from datetime import UTC, datetime
@@ -48,7 +48,7 @@ class ToolAction(enum.StrEnum):
 
 
 FORBIDDEN_TOOL_ACTIONS = {
-    "merge_pull_request": "Automatic PR merge is strictly forbidden in CodeGuard AI.",
+    "merge_pull_request": "Automatic PR merge is strictly forbidden in CodeGuard.",
     "branch_delete": "Automatic branch deletion is strictly forbidden.",
     "repository_delete": "Automatic repository deletion is strictly forbidden.",
     "repo_delete": "Automatic repository deletion is strictly forbidden.",

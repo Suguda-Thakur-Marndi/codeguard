@@ -1,8 +1,8 @@
-# CodeGuard AI — Database Maintenance & Schema Evolution Guide
+# CodeGuard — Database Maintenance & Schema Evolution Guide
 
 ## 1. Database Architecture & Schema Baseline
 
-CodeGuard AI uses PostgreSQL 16 (production/staging) and SQLite (hermetic local testing/isolated test runners). The schema is managed strictly via Alembic migrations located in `apps/api/alembic/versions/`.
+CodeGuard uses PostgreSQL 16 (production/staging) and SQLite (hermetic local testing/isolated test runners). The schema is managed strictly via Alembic migrations located in `apps/api/alembic/versions/`.
 
 ### 1.1 Migration Revision History
 

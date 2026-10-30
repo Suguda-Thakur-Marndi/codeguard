@@ -174,7 +174,7 @@ export default function BenchmarksPage() {
             No Benchmark Runs Recorded in Database
           </h2>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-lg mx-auto">
-            CodeGuard AI strictly refuses to fabricate performance metrics or benchmark numbers. All metrics must be
+            CodeGuard strictly refuses to fabricate performance metrics or benchmark numbers. All metrics must be
             empirically calculated by running the benchmark evaluation suite against real ground-truth scenarios.
           </p>
           <div className="p-space-sm rounded bg-surface-container-low border border-[#262930] text-left font-code-block text-code-block max-w-md mx-auto space-y-1">

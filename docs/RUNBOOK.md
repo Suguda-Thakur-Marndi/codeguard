@@ -1,4 +1,4 @@
-# CodeGuard AI — Master Production Operations Runbook
+# CodeGuard — Master Production Operations Runbook
 
 **Document ID**: `DOC-OPS-RUNBOOK-01`  
 **Application Version**: `1.0.0`  
@@ -137,7 +137,7 @@ docker logs codeguard-api | grep -E "ghp_[A-Za-z0-9]{36}|AIzaSy[A-Za-z0-9_-]{33}
 ---
 
 ### 4.4 Disabling Review Publication (Emergency Kill-Switch)
-If CodeGuard AI produces erroneous comments or encounters an active regression:
+If CodeGuard produces erroneous comments or encounters an active regression:
 
 1. **Option A: Organization Policy Kill-Switch (No restart required)**:
    Make API call to update organization policy:

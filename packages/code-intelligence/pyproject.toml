@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "codeguard-code-intelligence"
 version = "0.1.0"
-description = "CodeGuard AI - Code Intelligence Engine (Tree-sitter AST, Symbol Graph, Context Ranking)"
+description = "CodeGuard - Code Intelligence Engine (Tree-sitter AST, Symbol Graph, Context Ranking)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

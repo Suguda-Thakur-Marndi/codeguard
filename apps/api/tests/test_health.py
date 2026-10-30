@@ -20,7 +20,7 @@ def test_root_endpoint(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert "CodeGuard AI" in data["name"]
+    assert "CodeGuard" in data["name"]
     assert data["phase"] == "Phase 1 - Production Foundation"
 
 

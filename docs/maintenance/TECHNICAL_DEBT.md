@@ -1,8 +1,8 @@
-# CodeGuard AI — Technical Debt Registry
+# CodeGuard — Technical Debt Registry
 
 ## 1. Governance & Prioritization Standard
 
-Technical debt in CodeGuard AI is managed with empirical rigor. Functional, well-tested code is **never rewritten simply because another framework or style is fashionable**. Technical debt is cataloged, evaluated against operational risk, and scheduled for remediation based on concrete engineering ROI.
+Technical debt in CodeGuard is managed with empirical rigor. Functional, well-tested code is **never rewritten simply because another framework or style is fashionable**. Technical debt is cataloged, evaluated against operational risk, and scheduled for remediation based on concrete engineering ROI.
 
 ---
 

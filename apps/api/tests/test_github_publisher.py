@@ -97,7 +97,7 @@ async def test_atomic_review_builder() -> None:
         }
     ]
     summary = GitHubReviewPublisher.build_review_summary(findings, action="COMMENT")
-    assert "CodeGuard AI Verified Review" in summary
+    assert "CodeGuard Verified Review" in summary
     assert "High Severity" in summary
     assert "Security Vulnerabilities**: 1" in summary
 

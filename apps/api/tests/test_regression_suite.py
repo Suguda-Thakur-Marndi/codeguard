@@ -1,4 +1,4 @@
-"""CodeGuard AI — Master Continuous Engineering & Regression Test Suite.
+"""CodeGuard — Master Continuous Engineering & Regression Test Suite.
 
 Provides permanent, high-value automated regression guards protecting:
  1. Unified Diff Parsing (CRLF/LF, multi-hunks, renames, deletions)

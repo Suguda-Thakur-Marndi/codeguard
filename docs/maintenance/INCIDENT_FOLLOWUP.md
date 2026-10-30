@@ -1,4 +1,4 @@
-# CodeGuard AI — Incident Follow-Up & Post-Mortem Guidelines
+# CodeGuard — Incident Follow-Up & Post-Mortem Guidelines
 
 ## 1. Prime Directive: Blameless Post-Mortem Culture
 
@@ -35,7 +35,7 @@ When a production incident, security anomaly, or review failure occurs, the main
 
 ## 3. Correlation ID & Observability Reconstruction
 
-Every request and asynchronous job in CodeGuard AI carries standard correlation headers:
+Every request and asynchronous job in CodeGuard carries standard correlation headers:
 
 | Identifier | Source | Scope | Log Key |
 | :--- | :--- | :--- | :--- |

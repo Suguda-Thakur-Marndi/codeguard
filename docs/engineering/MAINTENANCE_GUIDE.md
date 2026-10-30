@@ -1,4 +1,4 @@
-# CodeGuard AI — Long-Term Maintenance & Upgrade Guide
+# CodeGuard — Long-Term Maintenance & Upgrade Guide
 
 **Document Status**: Active / Authoritative  
 **Date**: September 17, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Overview & Golden Invariants
 
-When modifying, maintaining, or upgrading CodeGuard AI, engineers must preserve the following architectural invariants:
+When modifying, maintaining, or upgrading CodeGuard, engineers must preserve the following architectural invariants:
 1. **Never Bypass Human Authorization**: Consequential actions (publishing reviews, modifying external resources) require authenticated human approval.
 2. **Never Weaken Tests**: If a test fails after an upgrade, the upgrade is defective or incompatible. Fix the implementation or revert the upgrade.
 3. **Never Redesign Frontend UI/UX**: Visual styling, components, colors, and layouts in `apps/web/` must remain preserved.
@@ -52,7 +52,7 @@ To add or modify database tables:
 
 ## 4. Gemini Model Upgrades
 
-CodeGuard AI isolates LLM interactions within `app/agents/llm/`. To update or migrate model tiers:
+CodeGuard isolates LLM interactions within `app/agents/llm/`. To update or migrate model tiers:
 1. **Configuration**: Edit `app/core/config.py` (`GEMINI_MODEL_FAST`, `GEMINI_MODEL_REASONING`).
 2. **Verify Provider Abstraction**:
    - Check structured output schemas conforming to `ReviewFinding`.

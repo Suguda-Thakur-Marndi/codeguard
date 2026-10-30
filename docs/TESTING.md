@@ -1,4 +1,4 @@
-# CodeGuard AI — Master Testing & Verification Guide
+# CodeGuard — Master Testing & Verification Guide
 
 **Document ID**: `DOC-TEST-GUIDE-01`  
 **Application Version**: `1.0.0`  
@@ -9,7 +9,7 @@
 
 ## 1. Testing Philosophy & Test Pyramid
 
-CodeGuard AI enforces strict unit, integration, and security test coverage across all subsystems:
+CodeGuard enforces strict unit, integration, and security test coverage across all subsystems:
 
 - **Target Subsystems**: FastAPI routes, Pydantic schemas, Celery tasks, Tree-sitter parsers, Context ranker, Adversarial Judge, Zero-Trust Policy Engine, and Database repositories.
 

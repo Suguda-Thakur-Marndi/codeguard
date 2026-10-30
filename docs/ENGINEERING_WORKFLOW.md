@@ -1,6 +1,6 @@
-# CodeGuard AI — Multi-Agent Engineering Workflow Guide
+# CodeGuard — Multi-Agent Engineering Workflow Guide
 
-This document describes the development and maintenance workflow for CodeGuard AI using **Agency Agents**, **Serena**, and **Context7** as development assistants in Google Antigravity.
+This document describes the development and maintenance workflow for CodeGuard using **Agency Agents**, **Serena**, and **Context7** as development assistants in Google Antigravity.
 
 ---
 
@@ -100,7 +100,7 @@ When interacting with external libraries or SDKs:
 
 1. **Verify Installed Version**: Inspect `pyproject.toml` or `package.json` first. Never assume latest version APIs.
 2. **Retrieve Official Docs**: Fetch exact version documentation via Context7.
-3. **Hierarchy Rule**: If library documentation contradicts CodeGuard AI's architecture or security policy, **the project architecture wins**.
+3. **Hierarchy Rule**: If library documentation contradicts CodeGuard's architecture or security policy, **the project architecture wins**.
 4. **No Spontaneous Upgrades**: Do not upgrade dependencies unless explicitly tasked.
 
 CLI query:

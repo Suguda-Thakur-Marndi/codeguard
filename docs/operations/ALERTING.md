@@ -1,6 +1,6 @@
-# CodeGuard AI — Alerting Policies & Operational Thresholds
+# CodeGuard — Alerting Policies & Operational Thresholds
 
-This document defines the alerting thresholds, severity matrix, trigger conditions, and escalation paths for CodeGuard AI.
+This document defines the alerting thresholds, severity matrix, trigger conditions, and escalation paths for CodeGuard.
 
 ---
 
@@ -20,7 +20,7 @@ This document defines the alerting thresholds, severity matrix, trigger conditio
 ### Alert: `API_SERVICE_UNAVAILABLE`
 - **Severity**: P1 — CRITICAL
 - **Trigger**: `/api/v1/live` returns non-200 or times out for 3 consecutive checks (30 seconds).
-- **Impact**: External GitHub webhooks and dashboard users cannot reach CodeGuard AI.
+- **Impact**: External GitHub webhooks and dashboard users cannot reach CodeGuard.
 - **Remediation**:
   1. Inspect container status: `docker ps -f name=codeguard-api`.
   2. Check last 100 log lines: `docker logs --tail 100 codeguard-api`.

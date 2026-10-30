@@ -1,8 +1,8 @@
-# CodeGuard AI — System Regression Prevention Policy
+# CodeGuard — System Regression Prevention Policy
 
 ## 1. Prime Directive: Invariant Protection & Zero Test Weakening
 
-CodeGuard AI enforces a zero-regression invariant: **Existing test assertions are authoritative contracts**. If code changes cause an existing test to fail, the implementation must be fixed; assertions must never be weakened or deleted to force a build to pass.
+CodeGuard enforces a zero-regression invariant: **Existing test assertions are authoritative contracts**. If code changes cause an existing test to fail, the implementation must be fixed; assertions must never be weakened or deleted to force a build to pass.
 
 Every regression test added to the repository must protect a concrete security property, data integrity rule, or architectural invariant.
 

@@ -177,7 +177,7 @@ class GitHubClient:
                 json={
                     "id": 998877,
                     "user": {"login": "codeguard-ai[bot]"},
-                    "body": "CodeGuard AI Verified Review",
+                    "body": "CodeGuard Verified Review",
                     "state": "COMMENTED",
                     "html_url": f"https://github.com/{path.lstrip('/')}",
                     "comment_ids": [101, 102],

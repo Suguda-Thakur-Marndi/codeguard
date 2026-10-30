@@ -1,6 +1,6 @@
-# CodeGuard AI — Observability & Monitoring Guide
+# CodeGuard — Observability & Monitoring Guide
 
-This guide establishes the monitoring architecture, structured logging formats, distributed correlation tracing, and telemetry metrics implemented in CodeGuard AI.
+This guide establishes the monitoring architecture, structured logging formats, distributed correlation tracing, and telemetry metrics implemented in CodeGuard.
 
 ---
 
@@ -41,7 +41,7 @@ All application services emit single-line, structured JSON logs to standard outp
 
 ## 2. Distributed Correlation ID Tracing
 
-CodeGuard AI propagates a continuous causal correlation trace across all asynchronous processes:
+CodeGuard propagates a continuous causal correlation trace across all asynchronous processes:
 
 ```
 [Inbound HTTP Request] (X-Request-ID: req-12345)

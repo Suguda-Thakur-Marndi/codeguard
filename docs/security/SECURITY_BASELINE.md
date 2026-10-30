@@ -1,6 +1,6 @@
-# CodeGuard AI — Security Baseline & Performance Telemetry (SECURITY_BASELINE.md)
+# CodeGuard — Security Baseline & Performance Telemetry (SECURITY_BASELINE.md)
 
-This document establishes the verified security baseline, performance metrics, and test coverage inventory for CodeGuard AI Phase 15.
+This document establishes the verified security baseline, performance metrics, and test coverage inventory for CodeGuard Phase 15.
 
 ---
 

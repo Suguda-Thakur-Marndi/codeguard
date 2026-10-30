@@ -1,4 +1,4 @@
-# CodeGuard AI — REST API & External Integrations Specification
+# CodeGuard — REST API & External Integrations Specification
 
 **Document ID**: `DOC-API-SPEC-01`  
 **Application Version**: `1.0.0`  
@@ -10,7 +10,7 @@
 
 ## 1. Authentication & Security Schemes
 
-CodeGuard AI enforces four distinct security schemes across its API perimeter:
+CodeGuard enforces four distinct security schemes across its API perimeter:
 
 1. **Public / Unauthenticated**: Health check probes (`/live`, `/ready`, `/health`).
 2. **Bearer JWT Token**: Operator and developer sessions for dashboard actions.

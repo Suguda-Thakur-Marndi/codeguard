@@ -1,4 +1,4 @@
-"""Comprehensive Security & Resilience test suite for CodeGuard AI.
+"""Comprehensive Security & Resilience test suite for CodeGuard.
 
 Verifies:
 - Invalid webhook signatures & replay attacks

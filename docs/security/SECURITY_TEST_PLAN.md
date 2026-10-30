@@ -1,4 +1,4 @@
-# CodeGuard AI — Security Test Plan (Phase 15)
+# CodeGuard — Security Test Plan (Phase 15)
 
 **Phase**: 15  
 **Document**: Security Test Plan & Verification Procedures  
@@ -8,7 +8,7 @@
 
 ## 1. Scope & Test Objectives
 
-The primary objective of this test plan is to empirically verify that CodeGuard AI resists realistic cyber attacks, malicious pull requests, privilege escalation, prompt injection, tool confusion, commit drift race conditions, path traversal, command injection, and data isolation failures.
+The primary objective of this test plan is to empirically verify that CodeGuard resists realistic cyber attacks, malicious pull requests, privilege escalation, prompt injection, tool confusion, commit drift race conditions, path traversal, command injection, and data isolation failures.
 
 All tests are executable via standard test runners without requiring external internet connectivity, mock LLMs in automated pipelines, and safe test fixtures without live credentials or destructive payloads.
 

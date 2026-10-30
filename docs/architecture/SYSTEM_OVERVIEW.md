@@ -1,7 +1,7 @@
-# CodeGuard AI — System Architecture & Component Overview
+# CodeGuard — System Architecture & Component Overview
 
 **Document ID**: `DOC-ARCH-SYSTEM-01`  
-**Application**: CodeGuard AI  
+**Application**: CodeGuard  
 **Version**: `1.0.0`  
 **Base Commit**: `085615eb45da36135a7374b614e3705ad9ca2468`  
 **Last Verified**: 2026-09-29  
@@ -10,7 +10,7 @@
 
 ## 1. System Topology & Architectural Philosophy
 
-CodeGuard AI provides automated, adversarial-resistant GitHub Pull Request code reviews under strict zero-trust governance and human-in-the-loop authorization.
+CodeGuard provides automated, adversarial-resistant GitHub Pull Request code reviews under strict zero-trust governance and human-in-the-loop authorization.
 
 ```
                            +------------------------+

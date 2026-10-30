@@ -1,6 +1,6 @@
 # GitHub App Integration Setup Guide
 
-This document provides step-by-step instructions for configuring and connecting a GitHub App with CodeGuard AI for repository analysis and review operations.
+This document provides step-by-step instructions for configuring and connecting a GitHub App with CodeGuard for repository analysis and review operations.
 
 ---
 
@@ -29,7 +29,7 @@ This document provides step-by-step instructions for configuring and connecting 
    ```env
    GITHUB_PRIVATE_KEY_PATH=codeguard-ai-123.2026-10-03.private-key.pem
    ```
-   CodeGuard AI automatically resolves the key path whether commands are run from the project root or the `apps/api` directory.
+   CodeGuard automatically resolves the key path whether commands are run from the project root or the `apps/api` directory.
    
    Alternatively, you can provide the key inline via `GITHUB_PRIVATE_KEY`:
    ```env
@@ -65,7 +65,7 @@ This document provides step-by-step instructions for configuring and connecting 
    https://github.com/settings/installations/12345678
    ```
    The trailing number (`12345678`) is your **Installation ID**.
-5. Verify that this installation is registered with CodeGuard AI:
+5. Verify that this installation is registered with CodeGuard:
    ```bash
    curl -X POST http://localhost:8000/api/v1/github/installations/verify \
      -H "Content-Type: application/json" \
@@ -91,7 +91,7 @@ For local development and integration testing:
 
 ## 6. Verification Without Review Publication (Human Approval Gate)
 
-CodeGuard AI enforces strict zero-trust policy separation between review execution and review publication:
+CodeGuard enforces strict zero-trust policy separation between review execution and review publication:
 
 1. When a webhook arrives:
    - HMAC-SHA256 signature is verified.
@@ -100,7 +100,7 @@ CodeGuard AI enforces strict zero-trust policy separation between review executi
    - Findings are persisted in `review_findings` with statuses (`PUBLISHABLE`, `REJECTED`).
 2. **Zero Automated Publication**:
    - Review findings are **never** automatically published or posted as PR comments to GitHub.
-   - All publications require explicit human authorization through the CodeGuard AI dashboard or the `/api/v1/approvals` endpoint.
+   - All publications require explicit human authorization through the CodeGuard dashboard or the `/api/v1/approvals` endpoint.
    - Review publication jobs enforce an atomic `ApprovalRequest` check and lock against the current head SHA before any comment reaches GitHub API.
 3. You can safely inspect generated findings, AST chunks, and agent execution traces in the local database or dashboard without any risk of polluting GitHub PR comments.
 
@@ -134,7 +134,7 @@ If any setting reports `PLACEHOLDER`, `MISSING`, or `INVALID`, update your `.env
 
 ## 8. Security Guardrails Summary
 
-| Threat / Risk | CodeGuard AI Defense |
+| Threat / Risk | CodeGuard Defense |
 | :--- | :--- |
 | Private Key Leakage | Auto-discovery and resolution without logging; strict `.gitignore` enforcement |
 | Replay & Spoofing | Constant-time HMAC-SHA256 signature verification on raw webhook body |

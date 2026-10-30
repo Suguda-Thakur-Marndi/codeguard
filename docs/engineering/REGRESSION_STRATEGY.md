@@ -1,4 +1,4 @@
-# CodeGuard AI — Multi-Tier Regression Prevention Strategy
+# CodeGuard — Multi-Tier Regression Prevention Strategy
 
 **Document Status**: Active / Authoritative  
 **Date**: September 17, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Core Principles & Zero-Regression Axiom
 
-The CodeGuard AI engineering system operates under the **Zero-Regression Axiom**:
+The CodeGuard engineering system operates under the **Zero-Regression Axiom**:
 > *No code change, dependency update, or refactoring may degrade accuracy, bypass security boundaries, loosen test assertions, or invalidate existing contracts.*
 
 Existing unit tests, acceptance scenarios, and empirical benchmarks serve as non-negotiable ground truth. If a change causes a test to fail, the code is defective, not the test.
@@ -47,7 +47,7 @@ Tier 4: Acceptance & Operational Simulation (Nightly / Release)
 ## 3. Subsystem Invariant Protections
 
 ### 1. Diff Mapping & Line Index Invariants
-- **Invariant**: CodeGuard AI must never publish a review finding on an unchanged or invalid diff line.
+- **Invariant**: CodeGuard must never publish a review finding on an unchanged or invalid diff line.
 - **Guard**: `ChangedLineIndex` and `UnifiedDiffParser` classify all changed lines into `LEFT` (old) and `RIGHT` (new) coordinates.
 - **Regression Check**: Diffs with CRLF vs LF endings, multi-hunk single files, deleted files, and new files must maintain 100% line mapping precision.
 

@@ -1,6 +1,6 @@
-# CodeGuard AI — Residual Risk Register (RESIDUAL_RISKS.md)
+# CodeGuard — Residual Risk Register (RESIDUAL_RISKS.md)
 
-In compliance with the Zero-Bypass security principles of CodeGuard AI, this document registers all documented residual risks, their operational impact, reasons for their current status, active mitigations, and required future roadmap actions.
+In compliance with the Zero-Bypass security principles of CodeGuard, this document registers all documented residual risks, their operational impact, reasons for their current status, active mitigations, and required future roadmap actions.
 
 No security status may claim "100% secure" or hide residual risks.
 

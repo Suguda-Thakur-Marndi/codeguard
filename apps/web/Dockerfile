@@ -1,4 +1,4 @@
-# Multi-stage production Dockerfile for CodeGuard AI Web Dashboard
+# Multi-stage production Dockerfile for CodeGuard Web Dashboard
 FROM node:25-alpine AS base
 
 FROM base AS deps

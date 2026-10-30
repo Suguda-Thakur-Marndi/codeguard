@@ -1,4 +1,4 @@
-# CodeGuard AI — Architectural System Contracts (CONTRACTS.md)
+# CodeGuard — Architectural System Contracts (CONTRACTS.md)
 
 **Document Status**: Active / Authoritative  
 **Date**: September 17, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Executive Overview
 
-This document formalizes the 10 critical architectural contracts governing CodeGuard AI. Every data transition across subsystem boundaries is strictly typed, validated at boundary entry, and guarded by explicit failure and idempotency semantics.
+This document formalizes the 10 critical architectural contracts governing CodeGuard. Every data transition across subsystem boundaries is strictly typed, validated at boundary entry, and guarded by explicit failure and idempotency semantics.
 
 ```
 [GitHub Webhook]

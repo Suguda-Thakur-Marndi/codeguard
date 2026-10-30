@@ -1,1 +1,1 @@
-"""CodeGuard AI - Agentic AI Review Engine (Phase 3)."""
+"""CodeGuard - Agentic Review Engine (Phase 3)."""

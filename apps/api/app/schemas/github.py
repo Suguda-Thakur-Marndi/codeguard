@@ -70,7 +70,7 @@ class GitHubAccessibleRepositoriesResponse(BaseModel):
 
 
 class GitHubConnectRepositoryRequest(BaseModel):
-    """Payload to connect a specific GitHub repository into CodeGuard AI."""
+    """Payload to connect a specific GitHub repository into CodeGuard."""
 
     installation_id: int
     github_repo_id: int

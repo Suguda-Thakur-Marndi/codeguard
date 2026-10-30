@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class PullRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    """GitHub Pull Request tracked by CodeGuard AI."""
+    """GitHub Pull Request tracked by CodeGuard."""
 
     __tablename__ = "pull_requests"
 

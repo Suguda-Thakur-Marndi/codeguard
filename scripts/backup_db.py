@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-CodeGuard AI — Database Backup Utility
+CodeGuard — Database Backup Utility
 Supports automated PostgreSQL and SQLite database backups with gzip compression,
 SHA-256 checksum verification, retention management, and JSON metadata generation.
 """
@@ -92,7 +92,7 @@ def prune_old_backups(backup_dir: str, retention_days: int) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="CodeGuard AI Database Backup Utility")
+    parser = argparse.ArgumentParser(description="CodeGuard Database Backup Utility")
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL", "sqlite:///local_verify.db"))
     parser.add_argument("--output-dir", default=os.getenv("BACKUP_DIR", "backups"))
     parser.add_argument("--retention-days", type=int, default=int(os.getenv("BACKUP_RETENTION_DAYS", "30")))
@@ -100,7 +100,7 @@ def main() -> int:
 
     os.makedirs(args.output_dir, exist_ok=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%SZ")
-    print(f"[{timestamp}] Starting CodeGuard AI database backup...")
+    print(f"[{timestamp}] Starting CodeGuard database backup...")
 
     db_url = args.database_url
     if db_url.startswith("sqlite"):

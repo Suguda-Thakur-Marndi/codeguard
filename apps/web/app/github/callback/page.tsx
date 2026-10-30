@@ -61,7 +61,7 @@ function GitHubCallbackContent() {
             <div className="w-12 h-12 rounded-full border-4 border-primary-fixed border-t-transparent animate-spin mx-auto" />
             <h2 className="font-headline-md text-headline-md text-primary font-bold">Connecting GitHub...</h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant">
-              Verifying CodeGuard AI GitHub App installation and discovering accessible repositories.
+              Verifying CodeGuard GitHub App installation and discovering accessible repositories.
             </p>
           </div>
         )}

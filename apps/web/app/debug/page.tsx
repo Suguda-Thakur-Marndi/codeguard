@@ -128,7 +128,7 @@ export default function DebugPage() {
             <span className="px-2 py-0.5 rounded bg-amber-900 text-amber-100 text-[10px] font-bold uppercase tracking-wider">
               Internal Dev Tool
             </span>
-            <h2 className="text-sm font-bold">CodeGuard AI — Code Intelligence Debug Platform</h2>
+            <h2 className="text-sm font-bold">CodeGuard — Code Intelligence Debug Platform</h2>
           </div>
           <p className="text-xs text-amber-300/80 mt-1">
             This console exposes deterministic AST analysis, symbol graphs, and context ranking for platform verification.

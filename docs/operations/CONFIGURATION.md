@@ -1,6 +1,6 @@
-# CodeGuard AI — Configuration Audit & Variable Classification
+# CodeGuard — Configuration Audit & Variable Classification
 
-This document provides a comprehensive audit of all configuration variables in CodeGuard AI, classifying each by security sensitivity, environment applicability, default values, and production validation rules.
+This document provides a comprehensive audit of all configuration variables in CodeGuard, classifying each by security sensitivity, environment applicability, default values, and production validation rules.
 
 ---
 
@@ -17,7 +17,7 @@ This document provides a comprehensive audit of all configuration variables in C
 
 | Variable Name | Classification | Type | Default Value | Production Requirement | Fail-Fast Validation Rule |
 |---|---|---|---|---|---|
-| `APP_NAME` | PUBLIC | `str` | `"CodeGuard AI"` | Optional | None |
+| `APP_NAME` | PUBLIC | `str` | `"CodeGuard"` | Optional | None |
 | `APP_ENV` | ENVIRONMENT-SPECIFIC | `Literal` | `"development"` | Mandatory (`production`) | Must be one of `development`, `staging`, `production`, `test` |
 | `LOG_LEVEL` | PUBLIC | `Literal` | `"INFO"` | Optional | Must be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 | `DEBUG` | PUBLIC | `bool` | `False` | Must be `False` in prod | Disables interactive debug pages |

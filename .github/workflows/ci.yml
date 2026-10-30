@@ -1,4 +1,4 @@
-name: CodeGuard AI Continuous Integration (CI)
+name: CodeGuard Continuous Integration (CI)
 
 "on":
   push:

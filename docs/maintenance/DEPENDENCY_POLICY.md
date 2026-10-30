@@ -1,8 +1,8 @@
-# CodeGuard AI — Dependency Inventory & Management Policy
+# CodeGuard — Dependency Inventory & Management Policy
 
 ## 1. Dependency Inventory
 
-This inventory captures all direct dependencies across the CodeGuard AI ecosystem, documenting installed versions, runtime contexts, lockfile locations, and update governance rules.
+This inventory captures all direct dependencies across the CodeGuard ecosystem, documenting installed versions, runtime contexts, lockfile locations, and update governance rules.
 
 ### 1.1 Backend Core & API (`apps/api/pyproject.toml`)
 

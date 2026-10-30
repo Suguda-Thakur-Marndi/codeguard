@@ -2,12 +2,12 @@
 name: codeguard-workflow-orchestrator
 description: >-
   10-step multi-agent orchestration workflow combining Agency Agents, Serena,
-  and Context7 for reliable, human-quality software engineering in CodeGuard AI.
+  and Context7 for reliable, human-quality software engineering in CodeGuard.
 ---
 
 # CodeGuard Workflow Orchestrator
 
-This skill describes the master 10-step software engineering pipeline used to develop and maintain CodeGuard AI.
+This skill describes the master 10-step software engineering pipeline used to develop and maintain CodeGuard.
 
 ## The 10-Step Workflow
 

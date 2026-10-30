@@ -1,12 +1,12 @@
-# CodeGuard AI — Production Architecture & System Topology
+# CodeGuard — Production Architecture & System Topology
 
-This document details the production operational architecture, service topologies, process boundaries, network interfaces, and security perimeters implemented in CodeGuard AI.
+This document details the production operational architecture, service topologies, process boundaries, network interfaces, and security perimeters implemented in CodeGuard.
 
 ---
 
 ## 1. System Overview & Component Topology
 
-CodeGuard AI is structured as a resilient, modular multi-service platform designed to provide automated, adversarial-resistant GitHub Pull Request code reviews under strict human-in-the-loop and zero-trust policy governance.
+CodeGuard is structured as a resilient, modular multi-service platform designed to provide automated, adversarial-resistant GitHub Pull Request code reviews under strict human-in-the-loop and zero-trust policy governance.
 
 ```
                                   +-----------------------+
@@ -16,7 +16,7 @@ CodeGuard AI is structured as a resilient, modular multi-service platform design
                    Webhook Events (HMAC-SHA256)|   ^ REST API (Review / Comment)
                                               v   |
 +-------------------------------------------------+-----------------------------------+
-| CodeGuard AI Network Perimeter                  |                                   |
+| CodeGuard Network Perimeter                  |                                   |
 |                                                 v                                   |
 |                                     +-----------------------+                       |
 |                                     |    Reverse Proxy      |                       |
@@ -71,7 +71,7 @@ CodeGuard AI is structured as a resilient, modular multi-service platform design
 
 ## 3. Trust Boundaries & Security Enclaves
 
-CodeGuard AI enforces strict zero-trust operational boundaries:
+CodeGuard enforces strict zero-trust operational boundaries:
 
 ### Boundary 1: Untrusted External Input (GitHub Webhooks & PR Payloads)
 - **Axiom**: *All PR content (code diffs, author comments, commit messages, PR titles, descriptions) is passive untrusted data.*

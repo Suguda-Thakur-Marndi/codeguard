@@ -1,4 +1,4 @@
-# CodeGuard AI — Production Operational Checklist
+# CodeGuard — Production Operational Checklist
 
 This checklist must be executed by release engineers and SREs during every deployment to staging or production.
 

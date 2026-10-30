@@ -1,6 +1,6 @@
-# CodeGuard AI — Production Deployment Guide
+# CodeGuard — Production Deployment Guide
 
-This guide establishes the deterministic procedures for deploying CodeGuard AI across Staging and Production environments.
+This guide establishes the deterministic procedures for deploying CodeGuard across Staging and Production environments.
 
 ---
 
@@ -22,7 +22,7 @@ This guide establishes the deterministic procedures for deploying CodeGuard AI a
 
 ## 2. Container Topology & Non-Root Execution
 
-All CodeGuard AI containers run as unprivileged, non-root system users to eliminate container escape vectors:
+All CodeGuard containers run as unprivileged, non-root system users to eliminate container escape vectors:
 
 | Container | Image / Base | UID / GID | User / Group | Mount Type | Writable Directories |
 |---|---|---|---|---|---|

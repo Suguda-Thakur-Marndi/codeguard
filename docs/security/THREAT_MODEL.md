@@ -1,4 +1,4 @@
-# CodeGuard AI — Security Architecture & Threat Model (STRIDE)
+# CodeGuard — Security Architecture & Threat Model (STRIDE)
 
 **Phase**: 15  
 **Status**: Comprehensive / Authoritative  
@@ -8,7 +8,7 @@
 
 ## 1. Prime Directive & Engineering Security Axiom
 
-In CodeGuard AI, the fundamental security axiom is:
+In CodeGuard, the fundamental security axiom is:
 
 > **ALL EXTERNAL AND AI-GENERATED INPUT IS UNTRUSTED DATA.**  
 > The Large Language Model (Gemini) is an untrusted reasoning engine, NOT a security authority.  
@@ -31,7 +31,7 @@ TESTS / EMPIRICAL VALIDATION
 
 ## 2. Trust Boundary Map & Data Flow Architectures
 
-CodeGuard AI operates across five explicit trust boundaries. Each boundary defines trusted inputs, untrusted inputs, authentication, authorization, validation, output handling, logging, and failure behaviors.
+CodeGuard operates across five explicit trust boundaries. Each boundary defines trusted inputs, untrusted inputs, authentication, authorization, validation, output handling, logging, and failure behaviors.
 
 ### Trust Boundary 1: User / Frontend &rarr; API &rarr; Database
 ```
@@ -186,7 +186,7 @@ CodeGuard AI operates across five explicit trust boundaries. Each boundary defin
 
 ## 3. Threat Actor Model
 
-CodeGuard AI explicitly defenses against seven distinct threat actor profiles:
+CodeGuard explicitly defenses against seven distinct threat actor profiles:
 
 | Threat Actor | Description | Capabilities | Primary Targets | Key Defenses |
 | :--- | :--- | :--- | :--- | :--- |

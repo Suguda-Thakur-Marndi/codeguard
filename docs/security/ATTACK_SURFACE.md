@@ -1,4 +1,4 @@
-# CodeGuard AI — Attack Surface Analysis
+# CodeGuard — Attack Surface Analysis
 
 **Phase**: 15  
 **Document**: Attack Surface Specification  

@@ -1,4 +1,4 @@
-# CodeGuard AI — Developer Setup & Local Environment Guide
+# CodeGuard — Developer Setup & Local Environment Guide
 
 **Document ID**: `DOC-SETUP-01`  
 **Application Version**: `1.0.0`  
@@ -9,7 +9,7 @@
 
 ## 1. System Requirements & Runtime Matrix
 
-Before setting up CodeGuard AI, ensure your system meets the following prerequisite versions:
+Before setting up CodeGuard, ensure your system meets the following prerequisite versions:
 
 | Component | Minimum Version | Recommended Version | Verification Command |
 | :--- | :--- | :--- | :--- |
@@ -21,7 +21,7 @@ Before setting up CodeGuard AI, ensure your system meets the following prerequis
 | **Redis** *(Optional for local eager test; required for prod/staging)* | `6.2+` | `7.x` | `redis-cli --version` |
 | **Docker & Docker Compose** *(Optional for local venv development)* | `24.0+` | Latest | `docker compose version` |
 
-*Note: For rapid local testing and unit tests, CodeGuard AI supports SQLite in-memory / local files and Celery eager execution (`CELERY_TASK_ALWAYS_EAGER=true`), eliminating the mandatory need for active local Postgres/Redis daemons.*
+*Note: For rapid local testing and unit tests, CodeGuard supports SQLite in-memory / local files and Celery eager execution (`CELERY_TASK_ALWAYS_EAGER=true`), eliminating the mandatory need for active local Postgres/Redis daemons.*
 
 ---
 
@@ -73,7 +73,7 @@ cd ../..
 
 ## 3. Environment Variable Configuration
 
-CodeGuard AI utilizes Pydantic Settings (`app.core.config.Settings`) with strict fail-fast validation.
+CodeGuard utilizes Pydantic Settings (`app.core.config.Settings`) with strict fail-fast validation.
 
 ### Step 1: Initialize Local Environment File
 ```bash
@@ -84,7 +84,7 @@ cp .env.example .env
 
 | Variable Name | Required | Environment | Default / Safe Placeholder | Description |
 | :--- | :---: | :---: | :--- | :--- |
-| **`APP_NAME`** | Yes | All | `CodeGuard AI` | Display name of the application |
+| **`APP_NAME`** | Yes | All | `CodeGuard` | Display name of the application |
 | **`APP_ENV`** | Yes | All | `development` (`development`, `staging`, `production`, `test`) | Runtime operational mode |
 | **`DEBUG`** | No | Dev | `true` | Enables verbose stack traces and debug routes |
 | **`LOG_LEVEL`** | No | All | `INFO` (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) | Log severity threshold |
@@ -107,7 +107,7 @@ cp .env.example .env
 
 ## 4. Database Initialization & Migrations
 
-CodeGuard AI uses **Alembic** to manage 27 relational tables across 6 sequential revisions.
+CodeGuard uses **Alembic** to manage 27 relational tables across 6 sequential revisions.
 
 ### Apply Migrations to HEAD:
 ```bash
