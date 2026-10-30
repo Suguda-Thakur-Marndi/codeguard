@@ -383,6 +383,13 @@ class GitHubAppAuth:
                     resp = await c.post(url, headers=headers, timeout=15.0)
 
             if resp.status_code != 201:
+                if resp.status_code == 404:
+                    slug = settings.GITHUB_APP_SLUG or "codeguard-ai-123"
+                    raise GitHubAuthError(
+                        f"GitHub App '{slug}' is not installed for installation ID {installation_id} on GitHub (404 Not Found). "
+                        f"Please install the app at https://github.com/apps/{slug}/installations/new to connect your repositories.",
+                        details={"status_code": 404, "installation_id": installation_id},
+                    )
                 raise GitHubAuthError(
                     f"Failed to obtain installation token for {installation_id}: {resp.text}",
                     details={"status_code": resp.status_code},

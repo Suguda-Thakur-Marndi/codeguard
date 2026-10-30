@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import EntityNotFoundError, GitHubAPIError
+from app.core.exceptions import EntityNotFoundError, GitHubAPIError, GitHubAuthError
 from app.core.logging import logger
 from app.db.repositories.organization_repo import OrganizationRepository
 from app.db.repositories.repository_repo import RepositoryRepository
@@ -120,6 +120,13 @@ class GitHubService:
 
         try:
             gh_res = await self.client.list_installation_repositories(installation_id)
+        except GitHubAuthError as auth_err:
+            logger.warning(f"GitHub installation {installation_id} auth failure: {auth_err}")
+            err_code = (auth_err.details or {}).get("status_code", 404) if hasattr(auth_err, "details") else 404
+            raise GitHubAPIError(
+                auth_err.message,
+                status_code=err_code,
+            ) from auth_err
         except Exception as exc:
             logger.error(f"Error fetching repositories for installation {installation_id}: {exc}")
             raise GitHubAPIError(

@@ -157,8 +157,20 @@ export const GitHubConnectModal: React.FC<GitHubConnectModalProps> = ({
         {/* Modal Body */}
         <div className="p-space-md space-y-space-md overflow-y-auto flex-1">
           {error && (
-            <div className="p-3 rounded bg-error-container/20 border border-error text-error text-xs font-mono">
-              {error}
+            <div className="p-3 rounded bg-error-container/20 border border-error text-error text-xs font-mono space-y-2">
+              <div>{error}</div>
+              {(error.includes("not installed") || error.includes("404") || error.includes("Not Found")) && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleInstallNew}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary text-on-primary rounded text-xs font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                    <span>Install App on GitHub</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
