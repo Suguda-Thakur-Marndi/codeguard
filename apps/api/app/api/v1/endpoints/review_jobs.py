@@ -42,7 +42,7 @@ def _get_verified_job(job_id: str, db: Session, user: dict) -> ReviewJob:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Review job with ID '{job_id}' not found",
         )
-    verify_tenant_access(user, job.pull_request.repository.organization_id)
+    verify_tenant_access(user, job.pull_request.repository.organization_id, db=db)
     return job
 
 

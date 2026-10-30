@@ -31,7 +31,7 @@ def _get_verified_repo(repository_id: str, db: Session, user: dict) -> Repositor
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Repository with ID '{repository_id}' not found",
         )
-    verify_tenant_access(user, repo.organization_id)
+    verify_tenant_access(user, repo.organization_id, db=db)
     return repo
 
 

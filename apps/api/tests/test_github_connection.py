@@ -170,3 +170,43 @@ def test_webhook_cross_tenant_isolation(db_session: Session):
     assert res.status == "ignored"
     assert res.message is not None
     assert "Installation ID does not match" in res.message
+
+
+def test_github_app_jwt_issuer_is_string_for_numeric_app_id():
+    """Verify GitHubAppAuth generates valid RS256 JWT with string iss claim even when app_id is numeric."""
+    import jwt
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from app.github.auth import GitHubAppAuth
+
+    # Generate ephemeral RSA key for signature verification
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_pem = key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+
+    # Test numeric string and integer app_id
+    for test_app_id in ["1029384", 1029384]:
+        auth = GitHubAppAuth(app_id=test_app_id, private_key=private_pem)
+        token = auth.generate_app_jwt()
+        assert token is not None
+        assert isinstance(token, str)
+
+        decoded = jwt.decode(
+            token,
+            public_pem,
+            algorithms=["RS256"],
+            options={"verify_aud": False},
+        )
+        assert decoded["iss"] == "1029384"
+        assert isinstance(decoded["iss"], str)
+        assert "exp" in decoded
+        assert "iat" in decoded
+

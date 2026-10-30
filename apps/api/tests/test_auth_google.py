@@ -9,16 +9,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.main import app
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
 
 
 def test_google_login_redirect(client: TestClient):
-    """GET /api/v1/auth/google/login should redirect to Google OAuth consent screen."""
+    """GET /api/v1/auth/google/login should redirect to Google OAuth consent screen with CSRF cookie."""
     response = client.get("/api/v1/auth/google/login", follow_redirects=False)
 
     assert response.status_code == 302
@@ -27,6 +21,12 @@ def test_google_login_redirect(client: TestClient):
     assert f"client_id={settings.GOOGLE_CLIENT_ID}" in redirect_url
     assert f"redirect_uri={urllib.parse.quote(settings.GOOGLE_OAUTH_REDIRECT_URI, safe='')}" in redirect_url
     assert "scope=openid+email+profile" in redirect_url or "scope=openid%20email%20profile" in redirect_url
+
+    # Verify short-lived HttpOnly CSRF cookie is set
+    cookies = response.headers.get("set-cookie", "").lower()
+    assert "oauth_state_csrf=" in cookies
+    assert "httponly" in cookies
+    assert "samesite=lax" in cookies
 
 
 def test_google_callback_with_error(client: TestClient):
@@ -49,8 +49,18 @@ def test_google_callback_missing_code(client: TestClient):
 
 @pytest.mark.asyncio
 async def test_google_callback_success(client: TestClient):
-    """Successful code exchange should retrieve userinfo, issue signed JWT, and redirect with token."""
+    """Successful code exchange should retrieve userinfo, set session cookie, and redirect without token leakage."""
     from unittest.mock import MagicMock
+
+    csrf_token = "valid-csrf-token-abc123"
+    now = int(time.time())
+    state_payload = {
+        "csrf": csrf_token,
+        "return_to": "/dashboard",
+        "iat": now,
+        "exp": now + 900,
+    }
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
 
     mock_token_resp = MagicMock()
     mock_token_resp.status_code = 200
@@ -65,21 +75,36 @@ async def test_google_callback_success(client: TestClient):
         "picture": "https://lh3.googleusercontent.com/a/mock-pic",
     }
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
-        "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
-    ):
-        response = client.get("/api/v1/auth/google/callback?code=mock-auth-code&state=mock-state", follow_redirects=False)
+    client.cookies.set("oauth_state_csrf", csrf_token)
+    try:
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
+            "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
+        ):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=mock-auth-code&state={signed_state}",
+                follow_redirects=False,
+            )
 
-    assert response.status_code == 302
-    redirect_url = response.headers["location"]
-    assert "token=" in redirect_url
-    assert f"{settings.FRONTEND_URL}/dashboard" in redirect_url
+        assert response.status_code == 302
+        redirect_url = response.headers["location"]
+        # Invariant: No token leakage in query parameters or fragments
+        assert "token=" not in redirect_url
+        assert redirect_url == f"{settings.FRONTEND_URL}/dashboard"
+
+        # Invariant: HttpOnly session cookie is set
+        set_cookies = response.headers.get("set-cookie", "")
+        assert "codeguard_session=" in set_cookies
+        assert "httponly" in set_cookies.lower()
+    finally:
+        client.cookies.clear()
 
 
 def test_auth_me_with_bearer_jwt(client: TestClient):
     """GET /api/v1/auth/me should decode valid JWT and return user profile."""
     now = int(time.time())
     payload = {
+        "iss": "codeguard-ai",
+        "aud": "codeguard-api",
         "sub": "user-test-789",
         "email": "test@codeguard.ai",
         "name": "Test Engineer",
@@ -100,8 +125,17 @@ def test_auth_me_with_bearer_jwt(client: TestClient):
     assert data["user"]["picture"] == "https://example.com/avatar.png"
 
 
-def test_auth_logout(client: TestClient):
-    """POST /api/v1/auth/logout should return success."""
+def test_auth_logout_post_succeeds(client: TestClient):
+    """POST /api/v1/auth/logout should return success and clear session cookies."""
     response = client.post("/api/v1/auth/logout")
     assert response.status_code == 200
     assert response.json()["success"] is True
+    cookies = response.headers.get("set-cookie", "").lower()
+    assert "codeguard_session=" in cookies
+    assert "max-age=0" in cookies
+
+
+def test_auth_logout_get_rejected(client: TestClient):
+    """GET /api/v1/auth/logout must be rejected with 405 Method Not Allowed to eliminate Logout CSRF."""
+    response = client.get("/api/v1/auth/logout")
+    assert response.status_code == 405

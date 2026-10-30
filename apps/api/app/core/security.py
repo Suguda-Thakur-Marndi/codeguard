@@ -103,10 +103,26 @@ async def get_current_user_or_bypass(
             token,
             settings.SECRET_KEY,
             algorithms=["HS256"],
-            options={"require": ["exp", "sub"]},
+            options={"require": ["exp", "sub"], "verify_aud": False},
         )
+        # Validate issuer and audience if present in token
+        if payload.get("iss") and payload["iss"] != "codeguard-ai":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token issuer",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if payload.get("aud") and payload["aud"] != "codeguard-api":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token audience",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         jwt_org = payload.get("organization_id") or payload.get("org_id")
         effective_org = jwt_org if jwt_org else (x_org_id if settings.APP_ENV != "production" else None)
+        claimed_orgs = payload.get("organizations")
+        if claimed_orgs is None:
+            claimed_orgs = [effective_org] if effective_org else []
         return {
             "id": payload.get("sub"),
             "login": payload.get("name") or payload.get("login", "unknown"),
@@ -114,7 +130,10 @@ async def get_current_user_or_bypass(
             "role": payload.get("role", "user"),
             "picture": payload.get("picture"),
             "organization_id": effective_org,
+            "organizations": claimed_orgs,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,21 +142,85 @@ async def get_current_user_or_bypass(
         ) from e
 
 
-def verify_tenant_access(current_user: dict, target_org_id: str | None) -> None:
+def verify_tenant_access(
+    current_user: dict,
+    target_org_id: str | None,
+    db: object | None = None,
+) -> None:
     """
     Ensure the authenticated principal has authorization to access the target organization's resources.
 
     Enforcement rules:
-    1. If user has no organization_id (e.g. system worker or unconstrained dev principal), access is permitted.
-    2. If user has an organization_id, target_org_id MUST match. Any mismatch is strictly rejected with 403 Forbidden.
+    1. System workers (role='system') are permitted for background processing.
+    2. Users without verified organization membership fail closed (403 Forbidden).
+    3. Cross-tenant access is strictly rejected (403 Forbidden).
+    4. Real-time active status: When db session is available, membership is validated against
+       the database to ensure suspended or revoked memberships immediately fail closed.
     """
-    if not target_org_id:
+    # 1. System worker principal
+    if current_user.get("role") == "system":
         return
+
+    # 2. Check for dev-mode bypass without org constraints
+    is_dev = bool(
+        current_user.get("is_dev")
+        and settings.DEV_AUTH_BYPASS
+        and settings.APP_ENV in ("development", "test")
+    )
+
     user_org_id = current_user.get("organization_id")
-    if not user_org_id:
-        return
-    if str(user_org_id) != str(target_org_id):
+    raw_orgs = current_user.get("organizations")
+    allowed_orgs = list(raw_orgs) if raw_orgs else ([] if not user_org_id else [user_org_id])
+    if user_org_id and user_org_id not in allowed_orgs:
+        allowed_orgs.append(user_org_id)
+
+    # If neither target_org_id nor user_org_id is present, ungrounded users cannot access org-scoped resources
+    effective_org = target_org_id or user_org_id
+    if not effective_org:
+        if is_dev:
+            return
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cross-tenant access forbidden",
+            detail="No verified organization membership for target resource",
         )
+
+    # 3. Cross-tenant isolation check against token claims
+    if target_org_id and allowed_orgs:
+        if str(target_org_id) not in [str(o) for o in allowed_orgs]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cross-tenant access forbidden",
+            )
+
+    # Fail closed if non-dev user has no allowed orgs
+    if not allowed_orgs and not is_dev:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No verified organization membership for target resource",
+        )
+
+    # 4. Real-time DB verification: validate membership status is ACTIVE
+    if db is not None and not is_dev:
+        from app.models.membership import MembershipStatus, UserOrganizationMembership
+
+        user_id = current_user.get("id")
+        check_org = str(target_org_id or user_org_id)
+        if user_id and check_org:
+            membership = (
+                db.query(UserOrganizationMembership)  # type: ignore[union-attr]
+                .filter(
+                    UserOrganizationMembership.user_id == user_id,
+                    UserOrganizationMembership.organization_id == check_org,
+                )
+                .first()
+            )
+            if not membership:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Membership in target organization does not exist or has been revoked",
+                )
+            if membership.status != MembershipStatus.ACTIVE.value:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Membership in target organization is {membership.status.lower()}",
+                )

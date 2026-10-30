@@ -10,13 +10,6 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints.auth import is_safe_redirect_url
 from app.core.config import Settings, settings
-from app.main import app
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
-
 
 # ---------------------------------------------------------------------------
 # 1. DEV_AUTH_BYPASS Default & Environment Enforcement
@@ -133,6 +126,8 @@ def test_valid_session_cookie_accepted(client: TestClient):
     """When DEV_AUTH_BYPASS is False, a valid codeguard_session cookie is accepted."""
     now = int(time.time())
     payload = {
+        "iss": "codeguard-ai",
+        "aud": "codeguard-api",
         "sub": "cookie-user-42",
         "email": "cookie.user@codeguard.ai",
         "name": "Cookie User",
@@ -178,8 +173,8 @@ def test_is_safe_redirect_url_validation():
     assert is_safe_redirect_url("javascript:alert(1)") is False
 
 
-def test_google_login_generates_signed_jwt_state(client: TestClient):
-    """Initiating Google OAuth generates signed JWT state with return_to and csrf nonce."""
+def test_google_login_generates_signed_jwt_state_and_csrf_cookie(client: TestClient):
+    """Initiating Google OAuth generates signed JWT state and binds it to a short-lived CSRF cookie."""
     response = client.get("/api/v1/auth/google/login?redirect_url=/repositories", follow_redirects=False)
     assert response.status_code == 302
     location = response.headers["location"]
@@ -196,6 +191,12 @@ def test_google_login_generates_signed_jwt_state(client: TestClient):
     assert len(decoded["csrf"]) > 10
     assert decoded["return_to"] == "/repositories"
     assert "exp" in decoded
+
+    # Invariant: Initiating browser receives HttpOnly CSRF cookie matching the state token
+    cookie_str = response.headers.get("set-cookie", "")
+    assert "oauth_state_csrf=" in cookie_str
+    assert "httponly" in cookie_str.lower()
+    assert "samesite=lax" in cookie_str.lower()
 
 
 def test_google_login_sanitizes_unsafe_redirect_url(client: TestClient):
@@ -215,23 +216,62 @@ def test_google_login_sanitizes_unsafe_redirect_url(client: TestClient):
     assert decoded["return_to"] == "/dashboard"
 
 
-def test_google_callback_tampered_state_rejected(client: TestClient):
-    """Submitting tampered or invalid state to callback redirects to login with error."""
+def test_google_callback_missing_csrf_cookie_rejected(client: TestClient):
+    """Callback request without the oauth_state_csrf cookie must be rejected (Login CSRF defense)."""
+    now = int(time.time())
+    state_payload = {"csrf": "valid-token-12345", "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    # Do not set cookie in client
+    client.cookies.clear()
     response = client.get(
-        "/api/v1/auth/google/callback?code=mock-code&state=tampered-or-expired-jwt",
+        f"/api/v1/auth/google/callback?code=mock-code&state={signed_state}",
         follow_redirects=False,
     )
     assert response.status_code == 302
-    location = response.headers["location"]
-    assert f"{settings.FRONTEND_URL}/login?auth_error=invalid_oauth_state" in location
+    assert "auth_error=missing_oauth_cookie" in response.headers["location"]
+
+
+def test_google_callback_mismatched_csrf_cookie_rejected(client: TestClient):
+    """Callback with mismatched CSRF cookie and state token must be rejected."""
+    now = int(time.time())
+    state_payload = {"csrf": "original-csrf-nonce", "return_to": "/dashboard", "exp": now + 900}
+    signed_state = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+
+    client.cookies.set("oauth_state_csrf", "attacker-injected-cookie-value")
+    try:
+        response = client.get(
+            f"/api/v1/auth/google/callback?code=mock-code&state={signed_state}",
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+        assert "auth_error=invalid_oauth_state" in response.headers["location"]
+    finally:
+        client.cookies.clear()
+
+
+def test_google_callback_tampered_state_rejected(client: TestClient):
+    """Submitting tampered or invalid state to callback redirects to login with error."""
+    client.cookies.set("oauth_state_csrf", "some-cookie")
+    try:
+        response = client.get(
+            "/api/v1/auth/google/callback?code=mock-code&state=tampered-or-expired-jwt",
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+        location = response.headers["location"]
+        assert f"{settings.FRONTEND_URL}/login?auth_error=invalid_oauth_state" in location
+    finally:
+        client.cookies.clear()
 
 
 @pytest.mark.asyncio
-async def test_google_callback_sets_session_cookie(client: TestClient):
-    """Successful OAuth callback sets HttpOnly codeguard_session cookie and redirects."""
+async def test_google_callback_sets_session_cookie_and_no_token_leakage(client: TestClient):
+    """Successful OAuth callback sets HttpOnly session cookie, clears CSRF cookie, and does NOT leak token in URL."""
+    csrf_nonce = "verified-session-binding-csrf-nonce"
     now = int(time.time())
     state_payload = {
-        "csrf": "csrf-nonce-12345",
+        "csrf": csrf_nonce,
         "return_to": "/pull-requests",
         "iat": now,
         "exp": now + 900,
@@ -251,29 +291,38 @@ async def test_google_callback_sets_session_cookie(client: TestClient):
         "picture": "https://lh3.googleusercontent.com/avatar.png",
     }
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
-        "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
-    ):
-        response = client.get(
-            f"/api/v1/auth/google/callback?code=valid-code&state={signed_state}",
-            follow_redirects=False,
-        )
+    client.cookies.set("oauth_state_csrf", csrf_nonce)
+    try:
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_token_resp), patch(
+            "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_userinfo_resp
+        ):
+            response = client.get(
+                f"/api/v1/auth/google/callback?code=valid-code&state={signed_state}",
+                follow_redirects=False,
+            )
 
-    assert response.status_code == 302
-    location = response.headers["location"]
-    assert "/pull-requests?token=" in location
+        assert response.status_code == 302
+        location = response.headers["location"]
+        # Invariant: No token in query params, fragments, or path
+        assert "token=" not in location
+        assert location == f"{settings.FRONTEND_URL}/pull-requests"
 
-    # Verify HttpOnly session cookie
-    cookies = response.headers.get_list("set-cookie") if hasattr(response.headers, "get_list") else [response.headers.get("set-cookie", "")]
-    cookie_str = "; ".join(cookies)
-    assert "codeguard_session=" in cookie_str
-    assert "httponly" in cookie_str.lower()
-    assert "samesite=lax" in cookie_str.lower()
+        # Invariant: HttpOnly session cookie is established
+        cookies_header = response.headers.get("set-cookie", "")
+        assert "codeguard_session=" in cookies_header
+        assert "httponly" in cookies_header.lower()
+        assert "samesite=lax" in cookies_header.lower()
+
+        # Invariant: oauth_state_csrf is cleared to prevent replay attacks
+        assert "oauth_state_csrf=" in cookies_header
+        assert "max-age=0" in cookies_header.lower()
+    finally:
+        client.cookies.clear()
 
 
-def test_logout_clears_session_cookie(client: TestClient):
-    """POST and GET /api/v1/auth/logout must clear the codeguard_session cookie."""
-    # POST logout
+def test_logout_restricted_to_post_and_clears_cookie(client: TestClient):
+    """POST /auth/logout must clear codeguard_session cookie, and GET must be rejected with 405."""
+    # 1. POST logout succeeds
     post_res = client.post("/api/v1/auth/logout")
     assert post_res.status_code == 200
     assert post_res.json()["success"] is True
@@ -281,10 +330,61 @@ def test_logout_clears_session_cookie(client: TestClient):
     assert "codeguard_session=" in post_cookies
     assert "max-age=0" in post_cookies
 
-    # GET logout
+    # 2. GET logout is rejected with 405 Method Not Allowed to eliminate Logout CSRF
     get_res = client.get("/api/v1/auth/logout")
-    assert get_res.status_code == 200
-    assert get_res.json()["success"] is True
-    get_cookies = get_res.headers.get("set-cookie", "").lower()
-    assert "codeguard_session=" in get_cookies
-    assert "max-age=0" in get_cookies
+    assert get_res.status_code == 405
+
+
+# ---------------------------------------------------------------------------
+# 4. Multi-Tenant Grounding for Google OAuth Principals
+# ---------------------------------------------------------------------------
+
+
+def test_google_authenticated_user_without_org_denied_tenant_access(client: TestClient):
+    """Google OAuth authenticated user with no organization membership is denied access to tenant resources."""
+    now = int(time.time())
+    payload = {
+        "iss": "codeguard-ai",
+        "aud": "codeguard-api",
+        "sub": "google-user-no-org",
+        "email": "external@gmail.com",
+        "name": "External User",
+        "role": "developer",
+        "organization_id": None,  # No verified org membership
+        "iat": now,
+        "exp": now + 3600,
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+    # Accessing an organization's specific policy without verified membership -> 403 Forbidden
+    response = client.get(
+        "/api/v1/organizations/org-alpha-999/policies",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+    assert "No verified organization membership" in response.text or "forbidden" in response.text.lower()
+
+
+def test_google_authenticated_user_with_verified_org_allowed_and_cross_denied(client: TestClient):
+    """Google OAuth user with verified organization_id can access own tenant, but is denied other tenants."""
+    now = int(time.time())
+    payload = {
+        "iss": "codeguard-ai",
+        "aud": "codeguard-api",
+        "sub": "google-user-with-org",
+        "email": "employee@company.com",
+        "name": "Company Employee",
+        "role": "developer",
+        "organization_id": "org-company-123",
+        "iat": now,
+        "exp": now + 3600,
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+    # Cross-tenant request to a different organization -> 403 Forbidden
+    cross_res = client.get(
+        "/api/v1/organizations/org-competitor-456/policies",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert cross_res.status_code == 403
+    assert "Cross-tenant access forbidden" in cross_res.text

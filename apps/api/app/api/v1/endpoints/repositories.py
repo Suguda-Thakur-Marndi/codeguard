@@ -27,8 +27,10 @@ def list_repositories(
     user_org_id = _user.get("organization_id")
     effective_org_id = organization_id
     if user_org_id:
-        verify_tenant_access(_user, organization_id)
+        verify_tenant_access(_user, organization_id, db=db)
         effective_org_id = user_org_id
+    else:
+        verify_tenant_access(_user, organization_id, db=db)
 
     repo = RepositoryRepository(db)
     items, total = repo.list_repositories(
@@ -59,7 +61,7 @@ def get_repository(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Repository with ID '{repository_id}' not found",
         )
-    verify_tenant_access(_user, repository.organization_id)
+    verify_tenant_access(_user, repository.organization_id, db=db)
     return RepositoryDetail.model_validate(repository)
 
 
@@ -77,7 +79,7 @@ def delete_repository(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Repository with ID '{repository_id}' not found",
         )
-    verify_tenant_access(_user, repository.organization_id)
+    verify_tenant_access(_user, repository.organization_id, db=db)
     repo.delete(repository)
     return {
         "success": True,

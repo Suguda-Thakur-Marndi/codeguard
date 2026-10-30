@@ -13,6 +13,9 @@ from sqlalchemy.pool import StaticPool
 
 # Force testing configuration
 os.environ["APP_ENV"] = "test"
+os.environ["GITHUB_APP_ID"] = "dev-app-id"
+os.environ["GITHUB_PRIVATE_KEY_PATH"] = ""
+os.environ["GITHUB_PRIVATE_KEY"] = ""
 os.environ["GITHUB_WEBHOOK_SECRET"] = "test-webhook-secret-for-unit-tests"
 os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-characters-long"
 os.environ["DEV_AUTH_BYPASS"] = "true"

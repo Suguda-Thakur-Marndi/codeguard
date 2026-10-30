@@ -37,7 +37,7 @@ async function request<T>(endpoint: string, options?: RequestOptions): Promise<T
   const token = authStorage.getToken();
   const authHeaders: Record<string, string> = token
     ? { Authorization: `Bearer ${token}` }
-    : { "X-Dev-Token": "codeguard-dev-token" };
+    : {};
 
   try {
     const res = await fetch(url, {

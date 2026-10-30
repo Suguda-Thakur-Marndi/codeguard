@@ -29,7 +29,7 @@ def get_organization_policies(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
-    verify_tenant_access(_user, organization_id)
+    verify_tenant_access(_user, organization_id, db=db)
     service = PolicyService(db)
     policy = service.get_or_create_policy(organization_id)
     return {
@@ -56,7 +56,7 @@ def update_organization_policies(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
-    verify_tenant_access(_user, organization_id)
+    verify_tenant_access(_user, organization_id, db=db)
     service = PolicyService(db)
     user_role = str(_user.get("role", "MEMBER")).upper()
     if _user.get("is_dev") or user_role == "ADMIN":

@@ -18,6 +18,11 @@ from app.models.github_publication import (
 )
 from app.models.judge_decision import JudgeDecisionModel
 from app.models.judge_run import JudgeRun
+from app.models.membership import (
+    MembershipRole,
+    MembershipStatus,
+    UserOrganizationMembership,
+)
 from app.models.org_policy import OrganizationReviewPolicy
 from app.models.organization import Organization
 from app.models.pull_request import PullRequest
@@ -33,6 +38,7 @@ from app.models.review_finding import (
 from app.models.review_job import ReviewJob, ReviewJobStatus
 from app.models.symbol_reference import SymbolReference
 from app.models.tool_audit import ToolExecutionAudit
+from app.models.user import User
 from app.models.validation_result import ValidationResultModel
 from app.models.validation_scenario import ValidationScenarioModel
 from app.models.verification_event import VerificationEventModel
@@ -72,6 +78,10 @@ __all__ = [
     "PublicationJobStatus",
     "ToolExecutionAudit",
     "OrganizationReviewPolicy",
+    "User",
+    "UserOrganizationMembership",
+    "MembershipRole",
+    "MembershipStatus",
     "BenchmarkRunModel",
     "BenchmarkResultModel",
     "BenchmarkFindingEvaluationModel",

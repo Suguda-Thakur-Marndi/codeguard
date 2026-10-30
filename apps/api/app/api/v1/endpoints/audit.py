@@ -33,8 +33,10 @@ def list_audit_events(
     user_org_id = _user.get("organization_id")
     effective_org_id = organization_id
     if user_org_id:
-        verify_tenant_access(_user, organization_id)
+        verify_tenant_access(_user, organization_id, db=db)
         effective_org_id = user_org_id
+    else:
+        verify_tenant_access(_user, organization_id, db=db)
 
     if repository_id and effective_org_id:
         repo = db.scalar(select(Repository).where(Repository.id == repository_id))

@@ -16,16 +16,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   useEffect(() => {
     if (isLoginPage) return;
 
-    // In browser, consume token from URL if returned from OAuth redirect
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get("token");
-      if (token) {
-        authStorage.setToken(token);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-
     let isMounted = true;
     api
       .getAuthMe()

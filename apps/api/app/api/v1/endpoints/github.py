@@ -24,6 +24,24 @@ router = APIRouter(prefix="/github", tags=["GitHub App"])
 
 
 @router.get(
+    "/status",
+    summary="Check GitHub App configuration readiness",
+)
+def get_github_app_status(
+    _user: dict[str, Any] = Depends(get_current_user_or_bypass),
+) -> dict[str, Any]:
+    """Inspect GitHub App settings and report readiness (never exposes secrets)."""
+    from app.github.auth import validate_github_app_settings
+
+    statuses = validate_github_app_settings()
+    is_ready = all(v == "CONFIGURED" for v in statuses.values())
+    return {
+        "ready": is_ready,
+        "settings": statuses,
+    }
+
+
+@router.get(
     "/install-url",
     response_model=GitHubInstallUrlResponse,
     summary="Get GitHub App installation URL",

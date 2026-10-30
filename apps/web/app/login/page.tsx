@@ -45,21 +45,13 @@ function LoginForm() {
   const [checkingExistingSession, setCheckingExistingSession] = useState(true);
 
   const errorParam = searchParams.get("auth_error") || searchParams.get("error");
-  const tokenParam = searchParams.get("token");
   const returnToParam = searchParams.get("return_to") || searchParams.get("redirect_url");
 
   const safeReturn = getSafeReturnUrl(returnToParam);
   const errorMessage = mapAuthError(errorParam);
 
   useEffect(() => {
-    // 1. If redirected with token in query params, save it and redirect
-    if (tokenParam) {
-      authStorage.setToken(tokenParam);
-      router.replace(safeReturn);
-      return;
-    }
-
-    // 2. Check if already authenticated via active session cookie or existing token
+    // Check if already authenticated via active session cookie
     api
       .getAuthMe()
       .then((res) => {
@@ -72,7 +64,7 @@ function LoginForm() {
       .catch(() => {
         setCheckingExistingSession(false);
       });
-  }, [tokenParam, safeReturn, router]);
+  }, [safeReturn, router]);
 
   const handleGoogleLogin = () => {
     setLoading(true);

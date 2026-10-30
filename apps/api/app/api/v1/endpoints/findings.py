@@ -27,7 +27,7 @@ def _get_verified_finding(
             detail=f"Finding '{finding_id}' not found",
         )
     if finding.review_job and finding.review_job.pull_request and finding.review_job.pull_request.repository:
-        verify_tenant_access(user, finding.review_job.pull_request.repository.organization_id)
+        verify_tenant_access(user, finding.review_job.pull_request.repository.organization_id, db=repo.db)
     return finding
 
 

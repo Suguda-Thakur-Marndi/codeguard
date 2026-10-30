@@ -29,10 +29,15 @@ def list_pull_requests(
     """List pull requests with pagination, state filters, and tenant isolation."""
     user_org_id = _user.get("organization_id")
 
-    if repository_id and user_org_id:
+    if not user_org_id and not _user.get("is_dev") and _user.get("role") != "system":
+        verify_tenant_access(_user, None, db=db)
+
+    if repository_id:
         target_repo = RepositoryRepository(db).get_by_id(repository_id)
         if target_repo:
-            verify_tenant_access(_user, target_repo.organization_id)
+            verify_tenant_access(_user, target_repo.organization_id, db=db)
+    elif user_org_id:
+        verify_tenant_access(_user, user_org_id, db=db)
 
     repo = PullRequestRepository(db)
     items, total = repo.list_pull_requests(
@@ -67,7 +72,7 @@ def get_pull_request(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pull request with ID '{pull_request_id}' not found",
         )
-    verify_tenant_access(_user, pr.repository.organization_id)
+    verify_tenant_access(_user, pr.repository.organization_id, db=db)
 
     # Attach latest review status if any jobs exist
     latest_review_status = None
@@ -95,7 +100,7 @@ def get_pull_request_reviews(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pull request with ID '{pull_request_id}' not found",
         )
-    verify_tenant_access(_user, pr.repository.organization_id)
+    verify_tenant_access(_user, pr.repository.organization_id, db=db)
 
     job_repo = ReviewJobRepository(db)
     items, total = job_repo.list_by_pull_request(
