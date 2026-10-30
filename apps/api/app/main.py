@@ -4,6 +4,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -40,9 +41,13 @@ MAX_BODY_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB payload limit
 
 
 class MaxPayloadSizeMiddleware(BaseHTTPMiddleware):
-    """Rejects incoming HTTP requests with Content-Length exceeding the configured threshold."""
+    """Rejects incoming HTTP requests exceeding the configured payload threshold.
 
-    def __init__(self, app: FastAPI, max_bytes: int = MAX_BODY_SIZE_BYTES):
+    Guards against oversized payloads via Content-Length header checks and
+    streaming/chunked transfer inspection to prevent DoS memory exhaustion.
+    """
+
+    def __init__(self, app: Any, max_bytes: int = MAX_BODY_SIZE_BYTES) -> None:
         super().__init__(app)
         self.max_bytes = max_bytes
 
@@ -53,7 +58,7 @@ class MaxPayloadSizeMiddleware(BaseHTTPMiddleware):
                 length = int(content_length)
                 if length > self.max_bytes:
                     return JSONResponse(
-                        status_code=413,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         content={
                             "error": {
                                 "code": "PAYLOAD_TOO_LARGE",
@@ -63,7 +68,50 @@ class MaxPayloadSizeMiddleware(BaseHTTPMiddleware):
                     )
             except ValueError:
                 pass
-        return await call_next(request)
+
+        # Guard streaming and chunked uploads where Content-Length is omitted
+        bytes_received = 0
+        original_receive = request._receive
+        exceeded = False
+
+        async def receive_with_limit() -> dict[str, Any]:
+            nonlocal bytes_received, exceeded
+            msg = await original_receive()
+            if msg["type"] == "http.request":
+                bytes_received += len(msg.get("body", b""))
+                if bytes_received > self.max_bytes:
+                    exceeded = True
+                    return {"type": "http.request", "body": b"", "more_body": False}
+            return msg
+
+        request._receive = receive_with_limit
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            if exceeded:
+                return JSONResponse(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    content={
+                        "error": {
+                            "code": "PAYLOAD_TOO_LARGE",
+                            "message": f"Request entity exceeds the maximum allowed size of {self.max_bytes} bytes",
+                        }
+                    },
+                )
+            raise
+
+        if exceeded:
+            return JSONResponse(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                content={
+                    "error": {
+                        "code": "PAYLOAD_TOO_LARGE",
+                        "message": f"Request entity exceeds the maximum allowed size of {self.max_bytes} bytes",
+                    }
+                },
+            )
+        return response
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -141,8 +189,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # 0. Request payload size cap
-    app.add_middleware(MaxPayloadSizeMiddleware)
+    # 0. Request payload size cap (enforces 10 MB limit on Content-Length & streaming chunked uploads)
+    app.add_middleware(MaxPayloadSizeMiddleware, max_bytes=MAX_BODY_SIZE_BYTES)
 
     # 1. Security Headers
     app.add_middleware(SecurityHeadersMiddleware)

@@ -45,6 +45,20 @@ def test_oversized_payload_rejection_413(client: TestClient) -> None:
     assert "maximum allowed size" in data["error"]["message"]
 
 
+def test_oversized_chunked_payload_rejection_413(client: TestClient) -> None:
+    """Streaming chunked requests exceeding 10MB must be aborted and rejected with 413."""
+    def chunked_generator():
+        # Stream 11 chunks of 1 MB each (11 MB total)
+        for _ in range(11):
+            yield b"X" * (1024 * 1024)
+
+    response = client.post("/api/v1/webhooks/github", content=chunked_generator())
+    assert response.status_code == 413
+    data = response.json()
+    assert data["error"]["code"] == "PAYLOAD_TOO_LARGE"
+    assert "maximum allowed size" in data["error"]["message"]
+
+
 # -----------------------------------------------------------------------------
 # 2. OWASP Security Headers
 # -----------------------------------------------------------------------------
