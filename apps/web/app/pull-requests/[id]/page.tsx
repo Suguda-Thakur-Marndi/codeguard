@@ -148,15 +148,15 @@ export default function PullRequestDetailPage({
   const criticalFindingsCount = findings.filter((f) => f.severity === "CRITICAL").length;
   const highFindingsCount = findings.filter((f) => f.severity === "HIGH").length;
 
-  const totalFindingsCount = findings.length || 1;
+  const totalFindingsCount = findings.length;
   const secCount = findings.filter((f) => f.category === "SECURITY" || f.severity === "CRITICAL").length;
   const bugCount = findings.filter((f) => f.category === "BUG").length;
   const testCount = findings.filter((f) => f.category === "TEST_COVERAGE" || f.category === "ERROR_HANDLING").length;
   const perfCount = findings.filter((f) => f.category === "PERFORMANCE" || f.category === "CONTRACT").length;
-  const secPct = Math.round((secCount / totalFindingsCount) * 100);
-  const bugPct = Math.round((bugCount / totalFindingsCount) * 100);
-  const testPct = Math.round((testCount / totalFindingsCount) * 100);
-  const perfPct = Math.max(0, 100 - secPct - bugPct - testPct);
+  const secPct = totalFindingsCount > 0 ? Math.round((secCount / totalFindingsCount) * 100) : 0;
+  const bugPct = totalFindingsCount > 0 ? Math.round((bugCount / totalFindingsCount) * 100) : 0;
+  const testPct = totalFindingsCount > 0 ? Math.round((testCount / totalFindingsCount) * 100) : 0;
+  const perfPct = totalFindingsCount > 0 ? Math.max(0, 100 - secPct - bugPct - testPct) : 0;
 
   return (
     <div className="flex flex-col w-full pb-16">
@@ -343,7 +343,7 @@ export default function PullRequestDetailPage({
                 <span className="font-headline-sm text-body-sm text-on-surface font-semibold">Changed Files</span>
               </div>
               <span className="font-label-mono text-kbd-shortcut px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant">
-                {parsedDiffFiles.length || 1} files
+                {parsedDiffFiles.length} files
               </span>
             </div>
             <div className="relative mt-1">

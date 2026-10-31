@@ -67,6 +67,7 @@ export default function DashboardPage() {
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [allFindings, setAllFindings] = useState<ReviewFinding[]>([]);
+  const [appVersion, setAppVersion] = useState<string>("v1.0.0");
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,12 +83,17 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [reposRes, prsRes, instRes, appsRes] = await Promise.all([
+      const [reposRes, prsRes, instRes, appsRes, healthRes] = await Promise.all([
         api.getRepositories(1, 50).catch(() => ({ items: [], total: 0 })),
         api.getPullRequests(1, 50).catch(() => ({ items: [], total: 0 })),
         api.getGitHubInstallations().catch(() => []),
         api.getApprovals(1, 10, undefined, undefined, "PENDING").catch(() => ({ items: [], total: 0 })),
+        api.getHealth().catch(() => null),
       ]);
+
+      if (healthRes?.version) {
+        setAppVersion(`v${healthRes.version}`);
+      }
 
       const repos: Repository[] = reposRes.items ?? [];
       const prs: PullRequest[] = prsRes.items ?? [];
@@ -249,7 +255,7 @@ export default function DashboardPage() {
             <span className="font-label-mono text-[11px] uppercase tracking-wider text-[#4ade80] font-semibold">
               Engine: Operational
             </span>
-            <span className="text-outline font-label-mono text-[10px]">v3.4.1</span>
+            <span className="text-outline font-label-mono text-[10px]">{appVersion}</span>
           </div>
 
           {installations.length === 0 && (
@@ -829,15 +835,17 @@ export default function DashboardPage() {
                   {
                     icon: "timer",
                     label: "P95 Review Latency",
-                    value: "38.2s",
-                    sub: "Within SLA threshold",
+                    value: "—",
+                    sub: totalPRs > 0 ? "Awaiting latency telemetry" : "No completed runs yet",
                     color: "#60a5fa",
                   },
                   {
                     icon: "psychology",
                     label: "Validator Agreement",
-                    value: "98.4%",
-                    sub: "Multi-agent consensus",
+                    value: allFindings.length > 0
+                      ? `${Math.round(((allFindings.length - fpFindings.length) / allFindings.length) * 100)}%`
+                      : "—",
+                    sub: allFindings.length > 0 ? "Multi-agent consensus" : "No findings evaluated yet",
                     color: "#a78bfa",
                   },
                 ].map((m) => (
