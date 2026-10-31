@@ -174,6 +174,24 @@ def verify_tenant_access(
     if user_org_id and user_org_id not in allowed_orgs:
         allowed_orgs.append(user_org_id)
 
+    # Real-time DB lookup: If user has no organization in token, resolve active memberships from DB
+    if db is not None and not is_dev and not allowed_orgs and current_user.get("id"):
+        from app.models.membership import MembershipStatus, UserOrganizationMembership
+
+        db_memberships = (
+            db.query(UserOrganizationMembership)  # type: ignore[union-attr]
+            .filter(
+                UserOrganizationMembership.user_id == current_user["id"],
+                UserOrganizationMembership.status == MembershipStatus.ACTIVE.value,
+            )
+            .all()
+        )
+        if db_memberships:
+            allowed_orgs = [m.organization_id for m in db_memberships]
+            user_org_id = allowed_orgs[0]
+            current_user["organization_id"] = user_org_id
+            current_user["organizations"] = allowed_orgs
+
     # If neither target_org_id nor user_org_id is present, ungrounded users cannot access org-scoped resources
     effective_org = target_org_id or user_org_id
     if not effective_org:

@@ -179,11 +179,12 @@ def validate_github_app_settings(
     else:
         statuses["GITHUB_WEBHOOK_SECRET"] = "CONFIGURED"
 
-    # 5. Target installation ID (if provided)
-    if installation_id is not None:
-        if installation_id <= 0:
+    # 5. Target installation ID (if provided explicitly or in settings)
+    target_inst = installation_id if installation_id is not None else settings.GITHUB_INSTALLATION_ID
+    if target_inst is not None:
+        if target_inst <= 0:
             statuses["target_installation_id"] = "INVALID"
-        elif installation_id == 1 and settings.APP_ENV in ("development", "test"):
+        elif target_inst == 1 and settings.APP_ENV in ("development", "test"):
             statuses["target_installation_id"] = "PLACEHOLDER"
         else:
             statuses["target_installation_id"] = "CONFIGURED"

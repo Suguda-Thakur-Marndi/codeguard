@@ -82,7 +82,34 @@ async def verify_installation(
     """Validate installation with GitHub API and ensure Organization record is registered."""
     service = GitHubService(db)
     try:
-        return await service.verify_installation(body.installation_id)
+        res = await service.verify_installation(body.installation_id)
+        # Ensure the verifying user is registered as active OWNER of the organization
+        user_id = _user.get("id")
+        if user_id and not _user.get("is_dev"):
+            from app.models.membership import (
+                MembershipRole,
+                MembershipStatus,
+                UserOrganizationMembership,
+            )
+
+            existing_m = (
+                db.query(UserOrganizationMembership)
+                .filter(
+                    UserOrganizationMembership.user_id == user_id,
+                    UserOrganizationMembership.organization_id == res.id,
+                )
+                .first()
+            )
+            if not existing_m:
+                new_m = UserOrganizationMembership(
+                    user_id=user_id,
+                    organization_id=res.id,
+                    role=MembershipRole.OWNER.value,
+                    status=MembershipStatus.ACTIVE.value,
+                )
+                db.add(new_m)
+                db.commit()
+        return res
     except GitHubAPIError as exc:
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_400_BAD_REQUEST,

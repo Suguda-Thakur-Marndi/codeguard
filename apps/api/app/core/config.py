@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # GitHub App Credentials & Installation URLs
     GITHUB_APP_ID: str = "dev-app-id"
     GITHUB_APP_SLUG: str = "codeguard-ai-123"
+    GITHUB_INSTALLATION_ID: int | None = None
     GITHUB_APP_CLIENT_ID: str = ""
     GITHUB_APP_INSTALL_URL: str = ""
     GITHUB_PRIVATE_KEY: str = ""

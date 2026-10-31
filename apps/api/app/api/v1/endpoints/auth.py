@@ -295,9 +295,54 @@ async def google_callback(
 
 @router.get("/me", summary="Get authenticated user details")
 async def get_current_user_profile(
+    response: Response,
+    db: Session = Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user_or_bypass),
 ) -> dict[str, Any]:
-    """Return profile details for current authenticated session."""
+    """Return profile details for current authenticated session and refresh active org claims."""
+    user_id = current_user.get("id")
+    if user_id and not current_user.get("is_dev"):
+        memberships = (
+            db.query(UserOrganizationMembership)
+            .filter(
+                UserOrganizationMembership.user_id == user_id,
+                UserOrganizationMembership.status == MembershipStatus.ACTIVE.value,
+            )
+            .all()
+        )
+        active_org_ids = [m.organization_id for m in memberships]
+        if active_org_ids and (not current_user.get("organization_id") or not current_user.get("organizations")):
+            primary_org_id = active_org_ids[0]
+            current_user["organization_id"] = primary_org_id
+            current_user["organizations"] = active_org_ids
+
+            now = datetime.now(UTC)
+            expires_at = now + timedelta(days=7)
+            payload = {
+                "iss": "codeguard-ai",
+                "aud": "codeguard-api",
+                "sub": user_id,
+                "email": current_user.get("email"),
+                "name": current_user.get("login"),
+                "picture": current_user.get("picture"),
+                "role": current_user.get("role", "developer"),
+                "organization_id": primary_org_id,
+                "organizations": active_org_ids,
+                "iat": int(now.timestamp()),
+                "exp": int(expires_at.timestamp()),
+            }
+            session_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+            is_secure = settings.APP_ENV in ("production", "staging")
+            response.set_cookie(
+                key="codeguard_session",
+                value=session_token,
+                max_age=7 * 24 * 3600,
+                httponly=True,
+                secure=is_secure,
+                samesite="lax",
+                path="/",
+            )
+
     return {
         "authenticated": True,
         "user": current_user,
