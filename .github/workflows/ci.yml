@@ -152,7 +152,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Build API & Worker Container Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./apps/api/Dockerfile
@@ -160,7 +160,7 @@ jobs:
           tags: codeguard-api:${{ github.sha }}
 
       - name: Build Web Dashboard Container Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./apps/web
           file: ./apps/web/Dockerfile
