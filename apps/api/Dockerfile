@@ -1,5 +1,5 @@
 # Production Dockerfile for CodeGuard AI API and Worker
-FROM python:3.12-slim AS runner
+FROM python:3.15-slim AS runner
 
 WORKDIR /app
 
